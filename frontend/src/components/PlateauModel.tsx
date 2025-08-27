@@ -11,6 +11,7 @@ export interface PlateauModelProps {
   scale?: number;
   centerModel?: boolean;
   alignToGround?: boolean;
+  onMeshLoad?: (meshes: THREE.Mesh[]) => void;
 }
 
 export const PlateauModel: React.FC<PlateauModelProps> = ({ 
@@ -18,7 +19,8 @@ export const PlateauModel: React.FC<PlateauModelProps> = ({
   position = [0, 0, 0],
   scale = 1,
   centerModel = true,
-  alignToGround = false
+  alignToGround = false,
+  onMeshLoad
 }) => {
   const groupRef = useRef<THREE.Group>(null);
   const [modelLoaded, setModelLoaded] = useState(false);
@@ -26,6 +28,8 @@ export const PlateauModel: React.FC<PlateauModelProps> = ({
   const { scene } = useGLTF(path, true);
 
   const processModel = useCallback((scene: THREE.Object3D) => {
+    const meshes: THREE.Mesh[] = [];
+    
     scene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.castShadow = true;
@@ -35,8 +39,16 @@ export const PlateauModel: React.FC<PlateauModelProps> = ({
           child.material.metalness = 0.1;
           child.material.roughness = 0.9;
         }
+        
+        // Collect meshes for sound calculation
+        meshes.push(child);
       }
     });
+
+    // Pass meshes to parent component for sound calculation
+    if (onMeshLoad && meshes.length > 0) {
+      onMeshLoad(meshes);
+    }
 
     const box = new THREE.Box3().setFromObject(scene);
     const center = box.getCenter(new THREE.Vector3());
@@ -60,11 +72,12 @@ export const PlateauModel: React.FC<PlateauModelProps> = ({
         min: box.min.toArray(),
         max: box.max.toArray()
       },
-      originalPosition: scene.position.toArray()
+      originalPosition: scene.position.toArray(),
+      meshCount: meshes.length
     });
     
     return { scene, center, size };
-  }, [centerModel, alignToGround]);
+  }, [centerModel, alignToGround, onMeshLoad]);
 
   useEffect(() => {
     if (scene) {
