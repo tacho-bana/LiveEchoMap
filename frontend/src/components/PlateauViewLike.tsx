@@ -217,12 +217,6 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
               3Dヒートマップ {show3DHeatmap ? 'ON' : 'OFF'}
             </button>
             
-            <button
-              onClick={() => setShowStats(!showStats)}
-              className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
-            >
-              Stats {showStats ? 'OFF' : 'ON'}
-            </button>
           </div>
         </div>
       </div>

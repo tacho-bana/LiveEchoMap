@@ -114,52 +114,6 @@ export const HeatmapVisualization: React.FC<HeatmapVisualizationProps> = ({
 export const HeatmapLegend: React.FC<{ visible: boolean }> = ({ visible }) => {
   if (!visible) return null;
 
-  return (
-    <div className="absolute bottom-4 right-4 bg-white rounded-lg p-4 shadow-lg z-30">
-      <h4 className="text-sm font-semibold mb-3 text-gray-800">音の強度レベル (10dB刻み)</h4>
-      <div className="space-y-1 text-xs">
-        <div className="flex items-center space-x-3">
-          <div className="w-4 h-4 rounded-full" style={{backgroundColor: '#8b0000'}}></div>
-          <span>80dB超 (危険レベル)</span>
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="w-4 h-4 rounded-full" style={{backgroundColor: '#ff0000'}}></div>
-          <span>70-80dB (非常に大きい)</span>
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="w-4 h-4 rounded-full" style={{backgroundColor: '#ff4500'}}></div>
-          <span>60-70dB (大きい)</span>
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="w-4 h-4 rounded-full" style={{backgroundColor: '#ff8c00'}}></div>
-          <span>50-60dB (やや大きい)</span>
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="w-4 h-4 rounded-full" style={{backgroundColor: '#ffd700'}}></div>
-          <span>40-50dB (普通)</span>
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="w-4 h-4 rounded-full" style={{backgroundColor: '#ffff00'}}></div>
-          <span>30-40dB (やや小さい)</span>
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="w-4 h-4 rounded-full" style={{backgroundColor: '#80ff00'}}></div>
-          <span>20-30dB (小さい)</span>
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="w-4 h-4 rounded-full" style={{backgroundColor: '#42ffc6'}}></div>
-          <span>10-20dB (静か)</span>
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="w-4 h-4 rounded-full" style={{backgroundColor: '#add8e6'}}></div>
-          <span>10dB未満 (微かな音)</span>
-        </div>
-      </div>
-      
-      <div className="mt-3 pt-3 border-t text-xs text-gray-500">
-        <p>• 0dB以下は非表示</p>
-        <p>• 建物による遮蔽効果を考慮</p>
-      </div>
-    </div>
-  );
+  
+
 };
