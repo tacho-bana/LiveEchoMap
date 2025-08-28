@@ -13,6 +13,7 @@ interface SoundControlPanelProps {
   soundSources: SoundSource[];
   onSoundSourceRemove: (id: string) => void;
   onDirectPlace?: () => void; // 直接配置用の関数
+  calculationProgress?: { processed: number; total: number; percentage: number };
 }
 
 /**
@@ -28,7 +29,8 @@ export const SoundControlPanel: React.FC<SoundControlPanelProps> = ({
   isCalculating,
   soundSources,
   onSoundSourceRemove,
-  onDirectPlace
+  onDirectPlace,
+  calculationProgress
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -80,11 +82,6 @@ export const SoundControlPanel: React.FC<SoundControlPanelProps> = ({
                   />
                 </button>
               </div>
-            </div>
-            <div className="text-xs text-gray-500 space-y-1">
-              <p>🔴 ボタン: 現在のカメラ位置に配置</p>
-              <p>モード切替: {isPlacementMode ? 'クリックで配置可能' : 'クリック配置無効'}</p>
-              <p className="text-blue-600 font-medium">WASD: カメラ移動, Shift: 高速, Space: 上昇</p>
             </div>
           </div>
 
@@ -161,9 +158,24 @@ export const SoundControlPanel: React.FC<SoundControlPanelProps> = ({
               }`}
             >
               {isCalculating ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  計算中...
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    計算中...
+                  </div>
+                  {calculationProgress && (
+                    <div className="space-y-1">
+                      <div className="w-full bg-blue-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${calculationProgress.percentage}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-xs text-center text-blue-100">
+                        {calculationProgress.processed} / {calculationProgress.total} 点完了 ({calculationProgress.percentage.toFixed(1)}%)
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 '音響計算を実行'

@@ -39,8 +39,15 @@ const ModelComponent: React.FC<{
           }
         }
       });
+
+      // 建物モデルの場合は、Y軸の原点を調整
+      if (path.includes('bldg_Building')) {
+        const box = new THREE.Box3().setFromObject(scene);
+        const yOffset = -box.min.y; // 最小Y座標を0にするオフセット
+        scene.position.y = yOffset;
+      }
     }
-  }, [scene, color, opacity]);
+  }, [scene, color, opacity, path]);
 
   if (!scene) return null;
 
@@ -93,7 +100,7 @@ export const PlateauMultiModel: React.FC<PlateauMultiModelProps> = ({
           path={`${basePath}/${models.buildings}`}
           color="#E6E6FA"
           opacity={1}
-          position={[0, 0, 0]}
+          position={[0, 50, 0]}
         />
       )}
     </group>
