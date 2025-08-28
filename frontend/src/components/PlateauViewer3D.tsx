@@ -35,9 +35,9 @@ export default function PlateauViewer3D({ modelUrl }: PlateauViewer3DProps) {
         <pointLight position={[10, 10, 10]} intensity={0.5} />
         
         <Suspense fallback={<LoadingFallback />}>
-          {modelUrl.includes('/models/test2.glb') ? (
+          {modelUrl.includes('/models/sinjuku') ? (
             <PlateauMultiModel 
-              basePath="/models/test2.glb"
+              basePath="/models/sinjuku"
               models={{
                 buildings: 'bldg_Building.glb',
                 terrain: 'dem_ReliefFeature.glb',
@@ -61,19 +61,18 @@ export default function PlateauViewer3D({ modelUrl }: PlateauViewer3DProps) {
         <OrbitControls
           enableDamping
           dampingFactor={0.05}
-          maxDistance={500}
-          minDistance={10}
-          maxPolarAngle={Math.PI * 0.49}
+          maxDistance={1000}
+          minDistance={1}
         />
       </Canvas>
       
       {/* UI オーバーレイ */}
       <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white p-4 rounded-lg">
         <div className="text-lg font-semibold">
-          {modelUrl.includes('/models/test2.glb') ? '山下ふ頭 3D都市モデル' : 'PLATEAU 3D Model Viewer'}
+          {modelUrl.includes('/models/sinjuku') ? '山下ふ頭 3D都市モデル' : 'PLATEAU 3D Model Viewer'}
         </div>
         <div className="text-sm text-gray-300 mt-1">
-          {modelUrl.includes('/models/test2.glb') ? (
+          {modelUrl.includes('/models/sinjuku') ? (
             <div>
               <div>建築物・道路・地形</div>
               <div className="mt-1">React Three Fiber + Three.js</div>

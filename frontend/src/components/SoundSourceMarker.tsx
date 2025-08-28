@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -22,6 +22,7 @@ export const SoundSourceMarker: React.FC<SoundSourceMarkerProps> = ({
   onRemove
 }) => {
   const meshRef = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
   const ringRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
 
@@ -34,17 +35,28 @@ export const SoundSourceMarker: React.FC<SoundSourceMarkerProps> = ({
       const targetScale = hovered ? 1.2 : 1.0;
       meshRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
     }
+
+    // マテリアルの色を強制更新
+    if (materialRef.current) {
+      materialRef.current.color.copy(intensityColor);
+      materialRef.current.emissive.copy(intensityColor);
+      materialRef.current.needsUpdate = true;
+    }
   });
 
   /**
    * 音源の強度に基づいて色を決定
    */
   const getIntensityColor = (dB: number): string => {
-    if (dB >= 90) return '#ff0000'; // 非常に高い
-    if (dB >= 80) return '#ff4400'; // 高い
-    if (dB >= 70) return '#ff8800'; // 中程度
-    if (dB >= 60) return '#ffaa00'; // やや低い
-    return '#ffdd00'; // 低い
+    if (dB >= 80) return '#8b0000'; // 暗赤（危険レベル）
+    if (dB >= 70) return '#ff0000'; // 真っ赤（非常に大きい）
+    if (dB >= 60) return '#ff4500'; // 赤オレンジ（大きい）
+    if (dB >= 50) return '#ff8c00'; // オレンジ（やや大きい）
+    if (dB >= 40) return '#ffd700'; // 金色（普通）
+    if (dB >= 30) return '#ffff00'; // 黄色（やや小さい）
+    if (dB >= 20) return '#80ff00'; // 薄緑（小さい）
+    if (dB >= 10) return '#42ffc6'; // 緑（静か）
+    return '#add8e6'; // 薄い青（微かな音）
   };
 
   /**
@@ -55,7 +67,11 @@ export const SoundSourceMarker: React.FC<SoundSourceMarkerProps> = ({
     onRemove(id);
   };
 
-  const intensityColor = getIntensityColor(intensity);
+  const intensityColor = useMemo(() => {
+    const colorString = getIntensityColor(intensity);
+    console.log(`Sound source ${id}: intensity=${intensity}dB, color=${colorString}`);
+    return new THREE.Color(colorString);
+  }, [intensity, id]);
 
   return (
     <group position={[position.x, position.y, position.z]}>
@@ -65,11 +81,14 @@ export const SoundSourceMarker: React.FC<SoundSourceMarkerProps> = ({
         onClick={handleClick}
         onPointerOver={() => setHovered(true)}
         onPointerOut={() => setHovered(false)}
+        key={`${id}-${intensity}`}
       >
-        <sphereGeometry args={[4, 16, 16]} />
+        <sphereGeometry args={[intensity >= 80 ? 6 : 4, 16, 16]} />
         <meshStandardMaterial 
-          color="#ff0000"
-          emissive="#ff0000"
+          ref={materialRef}
+          key={`${id}-material-${intensity}`}
+          color={intensityColor}
+          emissive={intensityColor}
           emissiveIntensity={0.3}
         />
       </mesh>

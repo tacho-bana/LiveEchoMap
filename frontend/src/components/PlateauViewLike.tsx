@@ -11,7 +11,7 @@ import { SoundControlPanel } from './SoundControlPanel';
 import { HeatmapVisualization, HeatmapLegend } from './HeatmapVisualization';
 import { LeafletHeatmap, HeatmapDataPoint } from './LeafletHeatmap';
 import { SimpleMapViewer } from './SimpleMapViewer';
-import { SoundCalculationEngine, SoundSource, CalculationResult } from './SoundCalculationEngine';
+import { SoundCalculationEngineAPI, SoundSource, CalculationResult } from './SoundCalculationEngineAPI';
 import { CameraRef } from './CameraRef';
 import * as THREE from 'three';
 
@@ -48,7 +48,7 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
       icon: '🏢',
       enabled: true,
       loading: false,
-      modelPath: '/models/test2.glb/bldg_Building.glb',
+      modelPath: '/models/sinjuku/bldg_Building.glb',
       color: '#E6E6FA'
     }
   ]);
@@ -75,8 +75,9 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
   const [mapType, setMapType] = useState<'simple' | 'leaflet'>('leaflet');
   const [buildingMeshes, setBuildingMeshes] = useState<THREE.Mesh[]>([]);
   const [currentCamera, setCurrentCamera] = useState<THREE.Camera | null>(null);
+  const [isOverheadView, setIsOverheadView] = useState(false);
   
-  const calculationEngine = useRef(new SoundCalculationEngine(20, 80)); // グリッドサイズ20m、計算範囲80m
+  const calculationEngine = useRef(new SoundCalculationEngineAPI(20, 300)); // グリッドサイズ20m、計算範囲300m
   
   // 地理座標の設定（山下ふ頭の座標）
   const referenceCoords = { longitude: 139.63, latitude: 35.45 };
@@ -87,7 +88,7 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
     console.log('音源が配置されました:', source);
   }, [currentIntensity]);
 
-  // 直接音源配置ハンドラー（カメラの現在位置に配置）
+  // 直接音源配置ハンドラー（カメラのXZ位置、Y=0に配置）
   const handleDirectPlace = useCallback(() => {
     if (!currentCamera) {
       console.warn('カメラが設定されていません');
@@ -96,9 +97,12 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
 
     const sourceId = `sound-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // カメラの現在位置を使用（少し下に配置）
-    const position = currentCamera.position.clone();
-    position.y = Math.max(position.y - 5, 2); // 最低2mの高さを保持
+    // カメラのXZ位置を使用、Y座標は0（地面レベル）に固定
+    const position = new THREE.Vector3(
+      currentCamera.position.x,
+      currentCamera.position.y, // カメラの現在のY座標
+      currentCamera.position.z
+    );
     
     const soundSource: SoundSource = {
       id: sourceId,
@@ -107,10 +111,9 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
     };
 
     setSoundSources(prev => [...prev, soundSource]);
-    console.log('音源配置（カメラ位置）:', {
+    console.log('音源配置（地面レベル）:', {
       id: sourceId,
       position: `(${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)})`,
-      cameraPosition: `(${currentCamera.position.x.toFixed(1)}, ${currentCamera.position.y.toFixed(1)}, ${currentCamera.position.z.toFixed(1)})`,
       intensity: currentIntensity
     });
   }, [currentIntensity, currentCamera]);
@@ -128,8 +131,8 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
 
   // ヒートマップ計算の実行
   const handleCalculationTrigger = useCallback(async () => {
-    if (soundSources.length === 0 || buildingMeshes.length === 0) {
-      console.warn('音源または建物データが不足しています');
+    if (soundSources.length === 0) {
+      console.warn('音源が配置されていません');
       return;
     }
 
@@ -137,7 +140,7 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
     try {
       // 複数の音源があれば最初の音源で計算（拡張可能）
       const primarySource = soundSources[0];
-      const result = calculationEngine.current.calculateSoundPropagation(
+      const result = await calculationEngine.current.calculateSoundPropagation(
         primarySource,
         buildingMeshes
       );
@@ -146,9 +149,9 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
       setHeatmapData(result.heatmapData);
       setShowHeatmap(true);
       setShow3DHeatmap(true);
-      console.log('音響計算が完了しました');
+      console.log('API音響計算が完了しました');
     } catch (error) {
-      console.error('音響計算中にエラーが発生しました:', error);
+      console.error('API音響計算中にエラーが発生しました:', error);
     } finally {
       setIsCalculating(false);
     }
@@ -243,16 +246,25 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
       {/* 3D Canvas or 2D Heatmap */}
       {!showHeatmap ? (
         <Canvas
-          camera={{ 
+          camera={isOverheadView ? { 
+            position: [0, 800, 0], 
+            up: [0, 0, -1],
+            fov: 60,
+            near: 0.1,
+            far: 15000
+          } : { 
             position: [0, 50, 0], 
             fov: 45,
             near: 0.1,
             far: 10000
           }}
-          shadows
+          shadows={!isOverheadView}
           className="bg-gradient-to-b from-blue-200 to-blue-100"
         >
           {showStats && <Stats />}
+          
+          {/* Fog control - disable in overhead view */}
+          {!isOverheadView && <fog attach="fog" args={['#87CEEB', 100, 2000]} />}
           
           <ambientLight intensity={0.6} />
           <directionalLight
@@ -295,6 +307,7 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
             <HeatmapVisualization
               gridPoints={calculationResult.gridPoints}
               visible={show3DHeatmap}
+              gridSize={calculationResult.gridSize}
             />
           )}
           
@@ -326,10 +339,12 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
           <OrbitControls
             enableDamping
             dampingFactor={0.05}
-            maxDistance={1000}
-            minDistance={20}
-            maxPolarAngle={Math.PI * 0.45}
+            maxDistance={isOverheadView ? 2000 : 1000}
+            minDistance={isOverheadView ? 500 : 20}
+            maxPolarAngle={isOverheadView ? Math.PI * 0.1 : Math.PI * 0.45}
+            minPolarAngle={isOverheadView ? 0 : undefined}
             target={[0, 0, 0]}
+            enabled={!isOverheadView}
           />
         </Canvas>
       ) : (
@@ -367,6 +382,7 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
             <HeatmapVisualization
               gridPoints={calculationResult.gridPoints}
               visible={true}
+              gridSize={calculationResult.gridSize}
             />
           )}
           
@@ -399,6 +415,20 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
           />
         </Canvas>
       )}
+
+      {/* View Toggle Button */}
+      <div className="absolute top-20 right-4 bg-white bg-opacity-90 rounded-lg p-2 shadow-lg z-30">
+        <button
+          onClick={() => setIsOverheadView(!isOverheadView)}
+          className={`px-4 py-2 rounded font-medium transition-colors ${
+            isOverheadView 
+              ? 'bg-blue-500 text-white hover:bg-blue-600' 
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          {isOverheadView ? '3D視点' : '上空視点'}
+        </button>
+      </div>
 
       {/* 3D Heatmap Legend */}
       <HeatmapLegend visible={show3DHeatmap} />

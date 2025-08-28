@@ -21,6 +21,6 @@ const PlateauViewLike = dynamic(
 
 export default function Home() {
   return (
-    <PlateauViewLike modelUrl="/models/test2.glb" />
+    <PlateauViewLike modelUrl="/models/sinjuku" />
   );
 }
