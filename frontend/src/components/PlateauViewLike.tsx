@@ -410,19 +410,6 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
         </Canvas>
       )}
 
-      {/* View Toggle Button */}
-      <div className="absolute top-20 right-4 bg-white bg-opacity-90 rounded-lg p-2 shadow-lg z-30">
-        <button
-          onClick={() => setIsOverheadView(!isOverheadView)}
-          className={`px-4 py-2 rounded font-medium transition-colors ${
-            isOverheadView 
-              ? 'bg-blue-500 text-white hover:bg-blue-600' 
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          {isOverheadView ? '3D視点' : '上空視点'}
-        </button>
-      </div>
 
       {/* 3D Heatmap Legend */}
       <HeatmapLegend visible={show3DHeatmap} />
