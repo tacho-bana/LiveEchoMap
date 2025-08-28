@@ -78,8 +78,8 @@ export class SoundCalculationEngineAPI {
 
       console.log('APIリクエスト:', requestData);
 
-      // バックエンドAPIを呼び出し
-      const response = await fetch(`${this.apiBaseUrl}/calculate_sound/`, {
+      // 計算開始
+      const calculationPromise = fetch(`${this.apiBaseUrl}/calculate_sound/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,12 +87,51 @@ export class SoundCalculationEngineAPI {
         body: JSON.stringify(requestData)
       });
 
+      // 進捗監視を開始
+      const progressInterval = setInterval(async () => {
+        try {
+          const progressResponse = await fetch(`${this.apiBaseUrl}/calculation_progress`);
+          if (progressResponse.ok) {
+            const progress = await progressResponse.json();
+            console.clear();
+            console.log('🎵 音響計算の進捗状況');
+            console.log('━'.repeat(50));
+            console.log(`📊 進捗: ${progress.completed} / ${progress.total} 点完了`);
+            console.log(`📈 完了率: ${progress.percentage.toFixed(1)}%`);
+            console.log(`⏱️ 経過時間: ${Math.floor(progress.elapsed_time || 0)}秒`);
+            if (progress.estimated_remaining_time) {
+              console.log(`⏳ 推定残り時間: ${Math.floor(progress.estimated_remaining_time)}秒`);
+            }
+            console.log(`🔄 ステータス: ${progress.status}`);
+            
+            // プログレスバーの表示
+            const barLength = 30;
+            const filledLength = Math.floor((progress.percentage / 100) * barLength);
+            const bar = '█'.repeat(filledLength) + '░'.repeat(barLength - filledLength);
+            console.log(`📊 [${bar}] ${progress.percentage.toFixed(1)}%`);
+            console.log('━'.repeat(50));
+
+            if (progress.status === 'completed') {
+              clearInterval(progressInterval);
+            }
+          }
+        } catch (error) {
+          // 進捗取得エラーは無視
+        }
+      }, 1000); // 1秒ごとに更新
+
+      const response = await calculationPromise;
+      clearInterval(progressInterval);
+
       if (!response.ok) {
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.log(`API計算完了: ${data.points_processed}個のポイントを処理`);
+      console.clear();
+      console.log('✅ API計算完了!');
+      console.log(`📊 処理済みポイント: ${data.points_processed}個`);
+      console.log('━'.repeat(50));
 
       // API結果をフロントエンド形式に変換（グリッドサイズ情報も含む）
       return this.convertApiResultToCalculationResult(data.results, data.grid_size || this.gridSize);

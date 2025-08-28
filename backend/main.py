@@ -9,6 +9,8 @@ import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
 from functools import partial
+import threading
+import time
 
 # ログの設定
 logging.basicConfig(level=logging.INFO)
@@ -32,6 +34,16 @@ model_info = {
     "faces": 0,
     "bounds": None,
     "loaded": False
+}
+
+# 進捗管理
+progress_lock = threading.Lock()
+current_progress = {
+    "total": 0,
+    "completed": 0,
+    "percentage": 0.0,
+    "status": "idle",
+    "start_time": None
 }
 
 # APIリクエストのデータモデル
@@ -100,6 +112,29 @@ def load_model():
 async def get_model_info():
     """モデルの読み込み状況を確認"""
     return model_info
+
+@app.get("/calculation_progress")
+async def get_calculation_progress():
+    """計算の進捗状況を取得"""
+    with progress_lock:
+        progress_data = current_progress.copy()
+        
+    # 経過時間を計算
+    if progress_data["start_time"]:
+        elapsed_time = time.time() - progress_data["start_time"]
+        progress_data["elapsed_time"] = elapsed_time
+        
+        # 推定残り時間
+        if progress_data["percentage"] > 0:
+            estimated_total_time = elapsed_time / (progress_data["percentage"] / 100)
+            progress_data["estimated_remaining_time"] = max(0, estimated_total_time - elapsed_time)
+        else:
+            progress_data["estimated_remaining_time"] = None
+    else:
+        progress_data["elapsed_time"] = 0
+        progress_data["estimated_remaining_time"] = None
+        
+    return progress_data
 
 @app.post("/calculate_sound/")
 async def calculate_sound(request: SoundRequest):
