@@ -47,7 +47,7 @@ export class SoundCalculationEngineAPI {
   constructor(gridSize: number = 20, calculationRadius: number = 300) {
     this.gridSize = gridSize;
     this.calculationRadius = calculationRadius;
-    this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://liveechomap.onrender.com';
   }
 
   /**
