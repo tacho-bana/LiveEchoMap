@@ -18,10 +18,17 @@ logging.basicConfig(level=logging.INFO)
 # FastAPIアプリケーション
 app = FastAPI()
 
+
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+    "https://liveechomap.onrender.com"
+]
+
 # CORS設定
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
