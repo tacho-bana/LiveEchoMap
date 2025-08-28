@@ -67,9 +67,9 @@ def load_model():
     global building_mesh, model_info
     
     potential_paths = [
-        "../frontend/public/models/sinjuku/bldg_Building.glb",
-        "frontend/public/models/sinjuku/bldg_Building.glb",
-        "./frontend/public/models/sinjuku/bldg_Building.glb"
+        "bldg_Building.glb",
+        "backend/bldg_Building.glb",
+        "./bldg_Building.glb"
     ]
     
     for file_path in potential_paths:
