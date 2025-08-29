@@ -207,6 +207,23 @@ def try_load_glb_file(file_path):
                 "loaded": True
             })
             
+            print(f"✅ Model loaded: {model_info['vertices']} vertices, {model_info['faces']} faces from {file_path}")
+            print(f"🏗️ Model health check:")
+            print(f"   📐 Bounds: min=({bounds[0][0]:.1f},{bounds[0][1]:.1f},{bounds[0][2]:.1f}) max=({bounds[1][0]:.1f},{bounds[1][1]:.1f},{bounds[1][2]:.1f})")
+            print(f"   📍 Center: ({center[0]:.1f},{center[1]:.1f},{center[2]:.1f})")
+            print(f"   📏 Size: ({size[0]:.1f}×{size[1]:.1f}×{size[2]:.1f})")
+            print(f"   🔧 Watertight: {is_watertight}, Volume: {volume}")
+            
+            # レイキャスティング機能のテスト
+            try:
+                test_ray = building_mesh.ray.intersects_location(
+                    ray_origins=[[0, 0, 0]],
+                    ray_directions=[[1, 0, 0]]
+                )
+                print(f"   🎯 Ray casting test: SUCCESS")
+            except Exception as e:
+                print(f"   ❌ Ray casting test: FAILED - {e}")
+                
             logging.info(f"✅ Model loaded: {model_info['vertices']} vertices, {model_info['faces']} faces from {file_path}")
             logging.info(f"🏗️ Model health check:")
             logging.info(f"   📐 Bounds: min=({bounds[0][0]:.1f},{bounds[0][1]:.1f},{bounds[0][2]:.1f}) max=({bounds[1][0]:.1f},{bounds[1][1]:.1f},{bounds[1][2]:.1f})")
@@ -459,10 +476,15 @@ def calculate_fast_obstruction(source_pos, target_pos, mesh):
         ray_direction = direction / distance
         
         # レイキャスティング
-        locations, _, _ = mesh.ray.intersects_location(
-            ray_origins=[source_pos],
-            ray_directions=[ray_direction]
-        )
+        try:
+            locations, _, _ = mesh.ray.intersects_location(
+                ray_origins=[source_pos],
+                ray_directions=[ray_direction]
+            )
+        except Exception as ray_error:
+            if np.random.random() < 0.01:
+                print(f"❌ Ray casting failed: {ray_error}")
+            return 0
         
         # 有効な交点をカウント
         valid_intersections = 0
@@ -474,7 +496,10 @@ def calculate_fast_obstruction(source_pos, target_pos, mesh):
                 intersection_distances.append(intersection_distance)
         
         # デバッグ用ログ（一部の計算でのみ出力）
-        if np.random.random() < 0.01:  # 1%の確率でログ出力
+        if np.random.random() < 0.05:  # 5%の確率でログ出力
+            print(f"🏢 Ray debug: total_hits={len(locations)}, valid_intersections={valid_intersections}")
+            print(f"🏢 All intersection distances: {[np.linalg.norm(loc - source_pos) for loc in locations]}")
+            print(f"🏢 Target distance: {distance:.1f}m")
             logging.info(f"🏢 Ray: src=({source_pos[0]:.1f},{source_pos[1]:.1f},{source_pos[2]:.1f}) dir=({ray_direction[0]:.2f},{ray_direction[1]:.2f},{ray_direction[2]:.2f})")
             logging.info(f"🏢 Intersections: {valid_intersections}, distances={intersection_distances[:3]}, total_hits={len(locations)}")
         
