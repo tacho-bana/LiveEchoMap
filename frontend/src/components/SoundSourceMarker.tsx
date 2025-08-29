@@ -48,15 +48,15 @@ export const SoundSourceMarker: React.FC<SoundSourceMarkerProps> = ({
    * 音源の強度に基づいて色を決定
    */
   const getIntensityColor = (dB: number): string => {
-    if (dB >= 80) return '#8b0000'; // 暗赤（危険レベル）
-    if (dB >= 70) return '#ff0000'; // 真っ赤（非常に大きい）
-    if (dB >= 60) return '#ff4500'; // 赤オレンジ（大きい）
-    if (dB >= 50) return '#ff8c00'; // オレンジ（やや大きい）
-    if (dB >= 40) return '#ffd700'; // 金色（普通）
-    if (dB >= 30) return '#ffff00'; // 黄色（やや小さい）
-    if (dB >= 20) return '#80ff00'; // 薄緑（小さい）
-    if (dB >= 10) return '#42ffc6'; // 緑（静か）
-    return '#add8e6'; // 薄い青（微かな音）
+    if (dB >= 80) return '#8b0000'; 
+    if (dB >= 70) return '#ff0000';
+    if (dB >= 60) return '#ff4500'; 
+    if (dB >= 50) return '#ff8c00'; 
+    if (dB >= 40) return '#ffd700'; 
+    if (dB >= 30) return '#ffff00'; 
+    if (dB >= 20) return '#80ff00'; 
+    if (dB >= 10) return '#42ffc6'; 
+    return '#add8e6'; 
   };
 
   /**

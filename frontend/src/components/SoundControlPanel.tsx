@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { SoundSource } from './SoundCalculationEngine';
+import { SoundSource } from './SoundCalculationEngineAPI';
 
 interface SoundControlPanelProps {
   currentIntensity: number;

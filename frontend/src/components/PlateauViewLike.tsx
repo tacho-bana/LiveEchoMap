@@ -9,9 +9,7 @@ import { SoundClickHandler } from './SoundClickHandler';
 import { SoundSourceMarker } from './SoundSourceMarker';
 import { SoundControlPanel } from './SoundControlPanel';
 import { HeatmapVisualization, HeatmapLegend } from './HeatmapVisualization';
-import { LeafletHeatmap, HeatmapDataPoint } from './LeafletHeatmap';
-import { SimpleMapViewer } from './SimpleMapViewer';
-import { SoundCalculationEngineAPI, SoundSource, CalculationResult } from './SoundCalculationEngineAPI';
+import { SoundCalculationEngineAPI, SoundSource, CalculationResult, HeatmapDataPoint } from './SoundCalculationEngineAPI';
 import { CameraRef } from './CameraRef';
 import * as THREE from 'three';
 
@@ -70,12 +68,9 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
   const [isCalculating, setIsCalculating] = useState(false);
   const [heatmapData, setHeatmapData] = useState<HeatmapDataPoint[]>([]);
   const [calculationResult, setCalculationResult] = useState<CalculationResult | null>(null);
-  const [showHeatmap, setShowHeatmap] = useState(false);
   const [show3DHeatmap, setShow3DHeatmap] = useState(false);
-  const [mapType, setMapType] = useState<'simple' | 'leaflet'>('leaflet');
   const [buildingMeshes, setBuildingMeshes] = useState<THREE.Mesh[]>([]);
   const [currentCamera, setCurrentCamera] = useState<THREE.Camera | null>(null);
-  const [isOverheadView, setIsOverheadView] = useState(false);
   
   const calculationEngine = useRef(new SoundCalculationEngineAPI(20, 300)); // グリッドサイズ20m、計算範囲300m
   
@@ -147,7 +142,6 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
 
       setCalculationResult(result);
       setHeatmapData(result.heatmapData);
-      setShowHeatmap(true);
       setShow3DHeatmap(true);
       console.log('API音響計算が完了しました');
     } catch (error) {
@@ -192,20 +186,6 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
             <h1 className="text-xl font-bold text-gray-800">PLATEAU 3D都市モデル - 音響シミュレーション</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setShowHeatmap(!showHeatmap)}
-                className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
-                  showHeatmap
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                {showHeatmap ? '3Dビュー（自由視点）' : '上空からの視点'}
-              </button>
-              
-            </div>
-            
             <button
               onClick={() => setShow3DHeatmap(!show3DHeatmap)}
               className={`px-3 py-1 text-xs rounded font-medium transition-colors ${
@@ -237,28 +217,20 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
       {/* Loading Overlay */}
       {isLoading && <LoadingSpinner />}
 
-      {/* 3D Canvas or 2D Heatmap */}
-      {!showHeatmap ? (
-        <Canvas
-          camera={isOverheadView ? { 
-            position: [0, 800, 0], 
-            up: [0, 0, -1],
-            fov: 60,
-            near: 0.1,
-            far: 15000
-          } : { 
-            position: [0, 50, 0], 
-            fov: 45,
-            near: 0.1,
-            far: 10000
-          }}
-          shadows={!isOverheadView}
-          className="bg-gradient-to-b from-blue-200 to-blue-100"
-        >
+      {/* 3D Canvas */}
+      <Canvas
+        camera={{ 
+          position: [0, 50, 0], 
+          fov: 45,
+          near: 0.1,
+          far: 10000
+        }}
+        shadows
+        className="bg-gradient-to-b from-blue-200 to-blue-100"
+      >
           {showStats && <Stats />}
           
-          {/* Fog control - disable in overhead view */}
-          {!isOverheadView && <fog attach="fog" args={['#87CEEB', 100, 2000]} />}
+          {/* Fog control - disabled for clear visibility */}
           
           <ambientLight intensity={0.6} />
           <directionalLight
@@ -272,8 +244,6 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
             shadow-camera-top={200}
             shadow-camera-bottom={-200}
           />
-          
-          <fog attach="fog" args={['#87CEEB', 100, 1000]} />
           
           {/* Camera Reference */}
           <CameraRef onCameraRef={setCurrentCamera} />
@@ -333,82 +303,11 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
           <OrbitControls
             enableDamping
             dampingFactor={0.05}
-            maxDistance={isOverheadView ? 2000 : 1000}
-            minDistance={isOverheadView ? 500 : 20}
-            maxPolarAngle={isOverheadView ? Math.PI * 0.1 : Math.PI * 0.45}
-            minPolarAngle={isOverheadView ? 0 : undefined}
-            target={[0, 0, 0]}
-            enabled={!isOverheadView}
-          />
-        </Canvas>
-      ) : (
-        <Canvas
-          camera={{ 
-            position: [0, 500, 0], 
-            up: [0, 0, -1],
-            fov: 60,
-            near: 0.1,
-            far: 10000
-          }}
-          shadows
-          className="bg-gradient-to-b from-blue-200 to-blue-100"
-        >
-          <ambientLight intensity={0.6} />
-          <directionalLight
-            position={[0, 100, 0]}
-            intensity={1}
-            castShadow
-          />
-          
-          {/* Sound Source Markers */}
-          {soundSources.map((source) => (
-            <SoundSourceMarker
-              key={source.id}
-              position={source.position}
-              intensity={source.intensity}
-              id={source.id}
-              onRemove={handleSoundSourceRemove}
-            />
-          ))}
-          
-          {/* 3D Heatmap Visualization */}
-          {calculationResult && (
-            <HeatmapVisualization
-              gridPoints={calculationResult.gridPoints}
-              visible={true}
-              gridSize={calculationResult.gridSize}
-            />
-          )}
-          
-          {/* Render enabled layers */}
-          <Suspense fallback={null}>
-            {layers.filter(layer => layer.enabled).map(layer => {
-              return (
-                <group key={layer.id}>
-                  <PlateauModel 
-                    path={layer.modelPath} 
-                    scale={1}
-                    position={[0, 0, 0]}
-                    centerModel={false}
-                    alignToGround={false}
-                    onMeshLoad={handleModelLoad}
-                  />
-                </group>
-              );
-            })}
-          </Suspense>
-          
-          <OrbitControls
-            enableDamping
-            dampingFactor={0.05}
             maxDistance={1000}
-            minDistance={200}
-            maxPolarAngle={Math.PI * 0.15} // 上からの視点に制限（少し緩く）
-            minPolarAngle={0}
+            minDistance={20}
             target={[0, 0, 0]}
           />
         </Canvas>
-      )}
 
 
       {/* 3D Heatmap Legend */}
