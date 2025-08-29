@@ -47,7 +47,11 @@ export class SoundCalculationEngineAPI {
   constructor(gridSize: number = 20, calculationRadius: number = 300) {
     this.gridSize = gridSize;
     this.calculationRadius = calculationRadius;
+    
+    // 環境変数で切り替え可能、デフォルトはローカル
     this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://liveechomap.onrender.com';
+    
+    console.log(`🔗 API Base URL: ${this.apiBaseUrl}`);
   }
 
   /**
