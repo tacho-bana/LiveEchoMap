@@ -116,33 +116,81 @@ def load_model():
     
     if building_mesh is None:
         logging.error("❌ CRITICAL: No valid model could be loaded from any path!")
-        logging.error("Available files in current directory:")
+        logging.error("Searching in all possible directories...")
         try:
-            current_files = os.listdir(".")
-            logging.info(f"Current directory: {os.getcwd()}")
-            logging.info(f"All files: {current_files}")
-            for file in current_files:
-                if file.endswith(".glb"):
-                    logging.info(f"✅ Found GLB file: {file}")
+            current_dir = os.getcwd()
+            logging.info(f"📂 Current directory: {current_dir}")
             
-            # modelsディレクトリを確認
-            if os.path.exists("models"):
-                models_files = os.listdir("models")
-                logging.info(f"Models directory files: {models_files}")
-                for file in models_files:
-                    if file.endswith(".glb"):
-                        logging.info(f"✅ Found GLB file in models: models/{file}")
-                        
-            # frontend/public/modelsも確認
-            if os.path.exists("../frontend/public/models/sinjuku"):
-                frontend_files = os.listdir("../frontend/public/models/sinjuku")
-                logging.info(f"Frontend models directory files: {frontend_files}")
-                for file in frontend_files:
-                    if file.endswith(".glb"):
-                        logging.info(f"✅ Found GLB file in frontend: ../frontend/public/models/sinjuku/{file}")
+            # すべての可能なディレクトリを再帰的に検索してGLBを自動読み込み
+            found_glb_paths = []
+            
+            def find_and_try_load_glb(directory, max_depth=3, current_depth=0):
+                if current_depth > max_depth:
+                    return
+                try:
+                    files = os.listdir(directory)
+                    logging.info(f"📁 Checking directory: {directory}")
+                    logging.info(f"   Files: {files}")
+                    
+                    for file in files:
+                        file_path = os.path.join(directory, file)
+                        if file.endswith(".glb"):
+                            logging.info(f"✅ Found GLB: {file_path}")
+                            found_glb_paths.append(file_path)
+                            
+                            # 見つけたGLBファイルで読み込み試行
+                            if try_load_glb_file(file_path):
+                                return True
+                                
+                        elif os.path.isdir(file_path) and not file.startswith('.'):
+                            if find_and_try_load_glb(file_path, max_depth, current_depth + 1):
+                                return True
+                except Exception as e:
+                    logging.warning(f"Cannot access {directory}: {e}")
+                return False
+            
+            # GLBファイルを探して自動読み込み
+            if find_and_try_load_glb("."):
+                logging.info("🎉 Building model loaded successfully from auto-discovery!")
+            elif find_and_try_load_glb(".."):
+                logging.info("🎉 Building model loaded successfully from parent directory!")
+            else:
+                logging.error(f"❌ No loadable GLB found. Discovered paths: {found_glb_paths}")
+                
         except Exception as e:
-            logging.error(f"Error listing files: {e}")
-        model_info["loaded"] = False
+            logging.error(f"Error during comprehensive search: {e}")
+        
+        if building_mesh is None:
+            model_info["loaded"] = False
+
+def try_load_glb_file(file_path):
+    """GLBファイルの読み込みを試行する共通関数"""
+    global building_mesh, model_info
+    try:
+        logging.info(f"🔄 Attempting to load: {file_path}")
+        scene = trimesh.load(file_path)
+        
+        meshes = []
+        if hasattr(scene, 'geometry'):
+            for name, geom in scene.geometry.items():
+                if isinstance(geom, trimesh.Trimesh) and len(geom.vertices) > 0:
+                    geom.remove_degenerate_faces()
+                    geom.remove_duplicate_faces()
+                    meshes.append(geom)
+        
+        if meshes:
+            building_mesh = trimesh.util.concatenate(meshes)
+            model_info.update({
+                "vertices": len(building_mesh.vertices),
+                "faces": len(building_mesh.faces),
+                "bounds": building_mesh.bounds.tolist(),
+                "loaded": True
+            })
+            logging.info(f"✅ Successfully loaded model: {model_info['vertices']} vertices, {model_info['faces']} faces from {file_path}")
+            return True
+    except Exception as e:
+        logging.warning(f"Failed to load {file_path}: {e}")
+    return False
 
 # APIエンドポイント
 @app.get("/model_info")
@@ -177,8 +225,11 @@ async def get_calculation_progress():
 async def calculate_sound(request: SoundRequest):
     """音響シミュレーションを実行"""
     if building_mesh is None or not model_info["loaded"]:
-        logging.error("❌ Building model not loaded! Calculation will not include building obstruction.")
-        raise HTTPException(status_code=500, detail=f"Building model not loaded. Model info: {model_info}")
+        logging.error("❌ Building model not loaded! Using fallback calculation without obstruction.")
+        # フォールバック：建物なしで計算を継続
+        building_mesh_fallback = None
+    else:
+        building_mesh_fallback = building_mesh
 
     source_pos = np.array(request.source_pos, dtype=np.float64)
     initial_db = request.initial_db
@@ -223,8 +274,8 @@ async def calculate_sound(request: SoundRequest):
                 chunk, 
                 source_pos.tolist(), 
                 initial_db, 
-                building_mesh.vertices.tolist(),
-                building_mesh.faces.tolist()
+                building_mesh_fallback.vertices.tolist() if building_mesh_fallback is not None else [],
+                building_mesh_fallback.faces.tolist() if building_mesh_fallback is not None else []
             ): chunk for chunk in chunks
         }
         
@@ -255,10 +306,12 @@ async def calculate_sound(request: SoundRequest):
 
 def process_chunk(points, source_pos, initial_db, mesh_vertices, mesh_faces):
     """チャンクの計算処理（プロセス間で実行）"""
-    # メッシュを再構築
-    vertices = np.array(mesh_vertices)
-    faces = np.array(mesh_faces)
-    mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+    # メッシュを再構築（建物モデルがある場合のみ）
+    mesh = None
+    if mesh_vertices and mesh_faces:
+        vertices = np.array(mesh_vertices)
+        faces = np.array(mesh_faces)
+        mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
     
     source_pos = np.array(source_pos)
     results = []
@@ -266,10 +319,13 @@ def process_chunk(points, source_pos, initial_db, mesh_vertices, mesh_faces):
     for x, y, z, distance in points:
         target_pos = np.array([x, y, z])
         
-        # 高速な音響計算
-        final_db = calculate_fast_sound_attenuation(
-            source_pos, target_pos, initial_db, mesh
-        )
+        # 建物モデルの有無で計算方法を分岐
+        if mesh is not None:
+            # 建物遮蔽ありの計算
+            final_db = calculate_fast_sound_attenuation(source_pos, target_pos, initial_db, mesh)
+        else:
+            # 建物遮蔽なしの計算（距離減衰のみ）
+            final_db = calculate_distance_only_attenuation(source_pos, target_pos, initial_db)
         
         results.append({
             "x": x,
@@ -280,6 +336,19 @@ def process_chunk(points, source_pos, initial_db, mesh_vertices, mesh_faces):
         })
     
     return results
+
+def calculate_distance_only_attenuation(source_pos, target_pos, initial_db):
+    """建物モデルなしの場合の距離減衰のみの計算"""
+    distance = np.linalg.norm(target_pos - source_pos)
+    if distance < 0.1:
+        return initial_db
+    
+    # 基本的な距離減衰のみ
+    distance_loss = 20 * np.log10(distance)
+    air_absorption = distance * 0.001
+    
+    final_db = initial_db - distance_loss - air_absorption
+    return max(final_db, 0)
 
 def calculate_fast_sound_attenuation(source_pos, target_pos, initial_db, mesh):
     """高速な音の減衰計算"""
