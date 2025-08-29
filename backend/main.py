@@ -75,13 +75,12 @@ def load_model():
     global building_mesh, model_info
     
     potential_paths = [
-        "bldg_Building.glb",
-        "./bldg_Building.glb",
-        "backend/bldg_Building.glb",
-        "./backend/bldg_Building.glb",
-        "frontend/public/models/sinjuku/bldg_Building.glb",
+        "models/bldg_Building.glb",
+        "./models/bldg_Building.glb",
         "../frontend/public/models/sinjuku/bldg_Building.glb", 
-        "./frontend/public/models/sinjuku/bldg_Building.glb"
+        "./frontend/public/models/sinjuku/bldg_Building.glb",
+        "bldg_Building.glb",
+        "./bldg_Building.glb"
     ]
     
     for file_path in potential_paths:
@@ -119,7 +118,6 @@ def load_model():
         logging.error("❌ CRITICAL: No valid model could be loaded from any path!")
         logging.error("Available files in current directory:")
         try:
-            import os
             current_files = os.listdir(".")
             logging.info(f"Current directory: {os.getcwd()}")
             logging.info(f"All files: {current_files}")
@@ -127,13 +125,21 @@ def load_model():
                 if file.endswith(".glb"):
                     logging.info(f"✅ Found GLB file: {file}")
             
-            # backendディレクトリも確認
-            if os.path.exists("backend"):
-                backend_files = os.listdir("backend")
-                logging.info(f"Backend directory files: {backend_files}")
-                for file in backend_files:
+            # modelsディレクトリを確認
+            if os.path.exists("models"):
+                models_files = os.listdir("models")
+                logging.info(f"Models directory files: {models_files}")
+                for file in models_files:
                     if file.endswith(".glb"):
-                        logging.info(f"✅ Found GLB file in backend: backend/{file}")
+                        logging.info(f"✅ Found GLB file in models: models/{file}")
+                        
+            # frontend/public/modelsも確認
+            if os.path.exists("../frontend/public/models/sinjuku"):
+                frontend_files = os.listdir("../frontend/public/models/sinjuku")
+                logging.info(f"Frontend models directory files: {frontend_files}")
+                for file in frontend_files:
+                    if file.endswith(".glb"):
+                        logging.info(f"✅ Found GLB file in frontend: ../frontend/public/models/sinjuku/{file}")
         except Exception as e:
             logging.error(f"Error listing files: {e}")
         model_info["loaded"] = False
