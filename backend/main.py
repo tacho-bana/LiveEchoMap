@@ -75,6 +75,9 @@ def load_model():
     global building_mesh, model_info
     
     potential_paths = [
+        "frontend/public/models/sinjuku/bldg_Building.glb",
+        "../frontend/public/models/sinjuku/bldg_Building.glb", 
+        "./frontend/public/models/sinjuku/bldg_Building.glb",
         "bldg_Building.glb",
         "backend/bldg_Building.glb",
         "./bldg_Building.glb"
@@ -104,7 +107,7 @@ def load_model():
                     "bounds": building_mesh.bounds.tolist(),
                     "loaded": True
                 })
-                logging.info(f"Model loaded: {model_info['vertices']} vertices, {model_info['faces']} faces")
+                logging.info(f"✅ Model loaded successfully: {model_info['vertices']} vertices, {model_info['faces']} faces from {file_path}")
                 break
                 
         except Exception as e:
@@ -112,7 +115,16 @@ def load_model():
             continue
     
     if building_mesh is None:
-        logging.error("No valid model could be loaded")
+        logging.error("❌ CRITICAL: No valid model could be loaded from any path!")
+        logging.error("Available files in current directory:")
+        try:
+            import os
+            current_files = os.listdir(".")
+            for file in current_files:
+                if file.endswith(".glb"):
+                    logging.info(f"Found GLB file: {file}")
+        except:
+            pass
         model_info["loaded"] = False
 
 # APIエンドポイント
@@ -148,7 +160,8 @@ async def get_calculation_progress():
 async def calculate_sound(request: SoundRequest):
     """音響シミュレーションを実行"""
     if building_mesh is None or not model_info["loaded"]:
-        raise HTTPException(status_code=500, detail="Building model not loaded")
+        logging.error("❌ Building model not loaded! Calculation will not include building obstruction.")
+        raise HTTPException(status_code=500, detail=f"Building model not loaded. Model info: {model_info}")
 
     source_pos = np.array(request.source_pos, dtype=np.float64)
     initial_db = request.initial_db
