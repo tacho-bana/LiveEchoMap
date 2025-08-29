@@ -49,7 +49,7 @@ export class SoundCalculationEngineAPI {
     this.calculationRadius = calculationRadius;
     
     // 環境変数で切り替え可能、デフォルトはローカル
-    this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://liveechomap.onrender.com';
     
     console.log(`🔗 API Base URL: ${this.apiBaseUrl}`);
   }
