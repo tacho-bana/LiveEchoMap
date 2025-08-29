@@ -77,9 +77,9 @@ def load_model():
     potential_paths = [
         "models/bldg_Building.glb",
         "./models/bldg_Building.glb",
-        "../frontend/public/models/sinjuku/bldg_Building.glb", 
-        "./frontend/public/models/sinjuku/bldg_Building.glb",
-        "bldg_Building.glb",
+        # "../frontend/public/models/sinjuku/bldg_Building.glb", 
+        # "./frontend/public/models/sinjuku/bldg_Building.glb",
+        # "bldg_Building.glb",
         "./bldg_Building.glb"
     ]
     
@@ -180,13 +180,36 @@ def try_load_glb_file(file_path):
         
         if meshes:
             building_mesh = trimesh.util.concatenate(meshes)
+            
+            # モデルの健全性チェック
+            is_watertight = building_mesh.is_watertight
+            volume = building_mesh.volume if is_watertight else "N/A"
+            bounds = building_mesh.bounds
+            center = bounds.mean(axis=0)
+            size = bounds[1] - bounds[0]
+            
             model_info.update({
                 "vertices": len(building_mesh.vertices),
                 "faces": len(building_mesh.faces),
-                "bounds": building_mesh.bounds.tolist(),
+                "bounds": bounds.tolist(),
+                "center": center.tolist(),
+                "size": size.tolist(),
+                "is_watertight": is_watertight,
+                "volume": float(volume) if volume != "N/A" else None,
                 "loaded": True
             })
-            logging.info(f"✅ Successfully loaded model: {model_info['vertices']} vertices, {model_info['faces']} faces from {file_path}")
+            
+            logging.info(f"✅ Model loaded: {model_info['vertices']} vertices, {model_info['faces']} faces from {file_path}")
+            logging.info(f"🏗️ Model health check:")
+            logging.info(f"   📐 Bounds: min=({bounds[0][0]:.1f},{bounds[0][1]:.1f},{bounds[0][2]:.1f}) max=({bounds[1][0]:.1f},{bounds[1][1]:.1f},{bounds[1][2]:.1f})")
+            logging.info(f"   📍 Center: ({center[0]:.1f},{center[1]:.1f},{center[2]:.1f})")
+            logging.info(f"   📏 Size: ({size[0]:.1f}×{size[1]:.1f}×{size[2]:.1f})")
+            logging.info(f"   🔧 Watertight: {is_watertight}, Volume: {volume}")
+            
+            # 座標系の妥当性チェック
+            if abs(center[0]) > 10000 or abs(center[1]) > 1000 or abs(center[2]) > 10000:
+                logging.warning(f"⚠️ Model coordinates seem unusual - check coordinate system")
+            
             return True
     except Exception as e:
         logging.warning(f"Failed to load {file_path}: {e}")
@@ -236,8 +259,39 @@ async def calculate_sound(request: SoundRequest):
     grid_size = request.grid_size
     calc_range = request.calc_range
     
-    logging.info(f"Calculating sound: source={source_pos}, initial_db={initial_db}, "
-                f"grid={grid_size}, range={calc_range}")
+    # 座標系と計算範囲の詳細ログ
+    logging.info(f"🎵 Sound calculation started:")
+    logging.info(f"   🎯 Source position: ({source_pos[0]:.1f},{source_pos[1]:.1f},{source_pos[2]:.1f})")
+    logging.info(f"   🔊 Initial dB: {initial_db}, Grid: {grid_size}m, Range: {calc_range}m")
+    
+    # 建物との位置関係チェック
+    if building_mesh_fallback is not None:
+        model_center = np.array(model_info.get("center", [0, 0, 0]))
+        model_bounds = np.array(model_info.get("bounds", [[0, 0, 0], [0, 0, 0]]))
+        distance_to_center = np.linalg.norm(source_pos - model_center)
+        
+        # 音源が建物範囲内にあるかチェック
+        in_bounds = all(model_bounds[0] <= source_pos) and all(source_pos <= model_bounds[1])
+        
+        logging.info(f"   🏢 Model center: ({model_center[0]:.1f},{model_center[1]:.1f},{model_center[2]:.1f})")
+        logging.info(f"   📏 Distance to model center: {distance_to_center:.1f}m")
+        logging.info(f"   🎯 Source in bounds: {in_bounds}")
+        
+        # 計算グリッドと建物の重複チェック
+        calc_bounds = [
+            source_pos - calc_range,
+            source_pos + calc_range
+        ]
+        grid_overlaps_model = not (
+            np.all(calc_bounds[1] < model_bounds[0]) or 
+            np.all(calc_bounds[0] > model_bounds[1])
+        )
+        
+        logging.info(f"   🗂️ Calc grid bounds: min=({calc_bounds[0][0]:.1f},{calc_bounds[0][1]:.1f},{calc_bounds[0][2]:.1f}) max=({calc_bounds[1][0]:.1f},{calc_bounds[1][1]:.1f},{calc_bounds[1][2]:.1f})")
+        logging.info(f"   🔗 Grid overlaps model: {grid_overlaps_model}")
+        
+        if not grid_overlaps_model:
+            logging.warning("⚠️ Calculation grid does not overlap with building model - no obstruction will be detected!")
     
     # 計算点を生成
     steps = int(calc_range / grid_size)
@@ -363,8 +417,9 @@ def calculate_fast_sound_attenuation(source_pos, target_pos, initial_db, mesh):
     obstruction_loss = calculate_fast_obstruction(source_pos, target_pos, mesh)
     
     # デバッグ用ログ（一部の計算でのみ出力）
-    if np.random.random() < 0.001:  # 0.1%の確率でログ出力
-        logging.info(f"🔍 Sound calc debug: distance={distance:.1f}m, distance_loss={distance_loss:.1f}dB, obstruction_loss={obstruction_loss:.1f}dB")
+    if np.random.random() < 0.01:  # 1%の確率でログ出力
+        logging.info(f"🔍 Sound calc: src=({source_pos[0]:.1f},{source_pos[1]:.1f},{source_pos[2]:.1f}) -> tgt=({target_pos[0]:.1f},{target_pos[1]:.1f},{target_pos[2]:.1f})")
+        logging.info(f"🔍 distance={distance:.1f}m, distance_loss={distance_loss:.1f}dB, obstruction_loss={obstruction_loss:.1f}dB")
     
     # 空気吸収（簡略版）
     air_absorption = distance * 0.001
@@ -399,8 +454,9 @@ def calculate_fast_obstruction(source_pos, target_pos, mesh):
                 intersection_distances.append(intersection_distance)
         
         # デバッグ用ログ（一部の計算でのみ出力）
-        if np.random.random() < 0.001:  # 0.1%の確率でログ出力
-            logging.info(f"🏢 Obstruction debug: intersections={valid_intersections}, distances={intersection_distances[:3]}")
+        if np.random.random() < 0.01:  # 1%の確率でログ出力
+            logging.info(f"🏢 Ray: src=({source_pos[0]:.1f},{source_pos[1]:.1f},{source_pos[2]:.1f}) dir=({ray_direction[0]:.2f},{ray_direction[1]:.2f},{ray_direction[2]:.2f})")
+            logging.info(f"🏢 Intersections: {valid_intersections}, distances={intersection_distances[:3]}, total_hits={len(locations)}")
         
         # 遮蔽による損失（簡略版）
         if valid_intersections == 0:
