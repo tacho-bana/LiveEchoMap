@@ -22,14 +22,14 @@ app = FastAPI()
 origins = [
     "http://localhost",
     "http://localhost:3000",
-    "https://liveechomap.onrender.com"
-    "https://liveechomap.onrender.com/" 
+    "https://liveechomap.onrender.com",
+    "https://liveechomap.onrender.com/"
 ]
 
-# CORS設定
+# CORS設定（より寛容な設定）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # 全てのオリジンを許可（本番では制限を推奨）
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
