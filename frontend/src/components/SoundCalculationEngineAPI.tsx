@@ -66,6 +66,12 @@ export class SoundCalculationEngineAPI {
   ): Promise<CalculationResult> {
     console.log(`API音響計算開始: 音源位置 ${soundSource.position.x}, ${soundSource.position.y}, ${soundSource.position.z}`);
     console.log(`計算範囲: 半径${this.calculationRadius}m, グリッドサイズ: ${this.gridSize}m`);
+    
+    // 建物モデルの状態を事前チェック
+    const modelInfo = await this.getModelInfo();
+    if (!modelInfo || !modelInfo.loaded) {
+      console.warn('⚠️ 建物モデルが読み込まれていないため、遮蔽効果なしで計算します');
+    }
 
     try {
       // APIリクエストデータを準備
@@ -128,7 +134,9 @@ export class SoundCalculationEngineAPI {
       clearInterval(progressInterval);
 
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('API Error Details:', errorText);
+        throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();
@@ -252,8 +260,17 @@ export class SoundCalculationEngineAPI {
       const response = await fetch(`${this.apiBaseUrl}/model_info`);
       if (response.ok) {
         const info = await response.json();
-        console.log('モデル情報:', info);
+        console.log('📋 モデル情報:', info);
+        
+        if (!info.loaded) {
+          console.error('❌ 建物モデルが読み込まれていません！音の遮蔽効果が正しく計算されません。');
+        } else {
+          console.log('✅ 建物モデル正常読み込み済み');
+        }
+        
         return info;
+      } else {
+        console.error('モデル情報取得エラー:', response.status, response.statusText);
       }
     } catch (error) {
       console.warn('モデル情報の取得に失敗:', error);

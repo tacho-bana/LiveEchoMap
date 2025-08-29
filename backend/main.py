@@ -75,12 +75,13 @@ def load_model():
     global building_mesh, model_info
     
     potential_paths = [
+        "bldg_Building.glb",
+        "./bldg_Building.glb",
+        "backend/bldg_Building.glb",
+        "./backend/bldg_Building.glb",
         "frontend/public/models/sinjuku/bldg_Building.glb",
         "../frontend/public/models/sinjuku/bldg_Building.glb", 
-        "./frontend/public/models/sinjuku/bldg_Building.glb",
-        "bldg_Building.glb",
-        "backend/bldg_Building.glb",
-        "./bldg_Building.glb"
+        "./frontend/public/models/sinjuku/bldg_Building.glb"
     ]
     
     for file_path in potential_paths:
@@ -120,11 +121,21 @@ def load_model():
         try:
             import os
             current_files = os.listdir(".")
+            logging.info(f"Current directory: {os.getcwd()}")
+            logging.info(f"All files: {current_files}")
             for file in current_files:
                 if file.endswith(".glb"):
-                    logging.info(f"Found GLB file: {file}")
-        except:
-            pass
+                    logging.info(f"✅ Found GLB file: {file}")
+            
+            # backendディレクトリも確認
+            if os.path.exists("backend"):
+                backend_files = os.listdir("backend")
+                logging.info(f"Backend directory files: {backend_files}")
+                for file in backend_files:
+                    if file.endswith(".glb"):
+                        logging.info(f"✅ Found GLB file in backend: backend/{file}")
+        except Exception as e:
+            logging.error(f"Error listing files: {e}")
         model_info["loaded"] = False
 
 # APIエンドポイント
