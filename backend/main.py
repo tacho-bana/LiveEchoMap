@@ -351,7 +351,7 @@ def calculate_distance_only_attenuation(source_pos, target_pos, initial_db):
     return max(final_db, 0)
 
 def calculate_fast_sound_attenuation(source_pos, target_pos, initial_db, mesh):
-    """高速な音の減衰計算"""
+    """高速な音の減衰計算（デバッグ強化版）"""
     distance = np.linalg.norm(target_pos - source_pos)
     if distance < 0.1:
         return initial_db
@@ -362,6 +362,10 @@ def calculate_fast_sound_attenuation(source_pos, target_pos, initial_db, mesh):
     # 建物による遮蔽（高速版）
     obstruction_loss = calculate_fast_obstruction(source_pos, target_pos, mesh)
     
+    # デバッグ用ログ（一部の計算でのみ出力）
+    if np.random.random() < 0.001:  # 0.1%の確率でログ出力
+        logging.info(f"🔍 Sound calc debug: distance={distance:.1f}m, distance_loss={distance_loss:.1f}dB, obstruction_loss={obstruction_loss:.1f}dB")
+    
     # 空気吸収（簡略版）
     air_absorption = distance * 0.001
     
@@ -369,7 +373,7 @@ def calculate_fast_sound_attenuation(source_pos, target_pos, initial_db, mesh):
     return max(final_db, 0)
 
 def calculate_fast_obstruction(source_pos, target_pos, mesh):
-    """高速な遮蔽計算"""
+    """高速な遮蔽計算（デバッグ強化版）"""
     try:
         direction = target_pos - source_pos
         distance = np.linalg.norm(direction)
@@ -387,10 +391,16 @@ def calculate_fast_obstruction(source_pos, target_pos, mesh):
         
         # 有効な交点をカウント
         valid_intersections = 0
+        intersection_distances = []
         for loc in locations:
             intersection_distance = np.linalg.norm(loc - source_pos)
             if 0.1 < intersection_distance < distance - 0.1:
                 valid_intersections += 1
+                intersection_distances.append(intersection_distance)
+        
+        # デバッグ用ログ（一部の計算でのみ出力）
+        if np.random.random() < 0.001:  # 0.1%の確率でログ出力
+            logging.info(f"🏢 Obstruction debug: intersections={valid_intersections}, distances={intersection_distances[:3]}")
         
         # 遮蔽による損失（簡略版）
         if valid_intersections == 0:
@@ -402,7 +412,10 @@ def calculate_fast_obstruction(source_pos, target_pos, mesh):
         else:
             return 35  # 重度の遮蔽
             
-    except Exception:
+    except Exception as e:
+        # エラーログを出力
+        if np.random.random() < 0.001:
+            logging.warning(f"⚠️ Obstruction calc error: {e}")
         return 0
 
 if __name__ == "__main__":
