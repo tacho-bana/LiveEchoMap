@@ -12,8 +12,16 @@ from functools import partial
 import threading
 import time
 
-# ログの設定
-logging.basicConfig(level=logging.INFO)
+# ログの設定（デプロイ環境対応）
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.StreamHandler(sys.stderr)
+    ]
+)
 
 # FastAPIアプリケーション
 app = FastAPI()
@@ -260,6 +268,9 @@ async def calculate_sound(request: SoundRequest):
     calc_range = request.calc_range
     
     # 座標系と計算範囲の詳細ログ
+    print(f"🎵 Sound calculation started:")
+    print(f"   🎯 Source position: ({source_pos[0]:.1f},{source_pos[1]:.1f},{source_pos[2]:.1f})")
+    print(f"   🔊 Initial dB: {initial_db}, Grid: {grid_size}m, Range: {calc_range}m")
     logging.info(f"🎵 Sound calculation started:")
     logging.info(f"   🎯 Source position: ({source_pos[0]:.1f},{source_pos[1]:.1f},{source_pos[2]:.1f})")
     logging.info(f"   🔊 Initial dB: {initial_db}, Grid: {grid_size}m, Range: {calc_range}m")
@@ -273,9 +284,9 @@ async def calculate_sound(request: SoundRequest):
         # 音源が建物範囲内にあるかチェック
         in_bounds = all(model_bounds[0] <= source_pos) and all(source_pos <= model_bounds[1])
         
-        logging.info(f"   🏢 Model center: ({model_center[0]:.1f},{model_center[1]:.1f},{model_center[2]:.1f})")
-        logging.info(f"   📏 Distance to model center: {distance_to_center:.1f}m")
-        logging.info(f"   🎯 Source in bounds: {in_bounds}")
+        print(f"   🏢 Model center: ({model_center[0]:.1f},{model_center[1]:.1f},{model_center[2]:.1f})")
+        print(f"   📏 Distance to model center: {distance_to_center:.1f}m")
+        print(f"   🎯 Source in bounds: {in_bounds}")
         
         # 計算グリッドと建物の重複チェック
         calc_bounds = [
@@ -287,6 +298,15 @@ async def calculate_sound(request: SoundRequest):
             np.all(calc_bounds[0] > model_bounds[1])
         )
         
+        print(f"   🗂️ Calc grid bounds: min=({calc_bounds[0][0]:.1f},{calc_bounds[0][1]:.1f},{calc_bounds[0][2]:.1f}) max=({calc_bounds[1][0]:.1f},{calc_bounds[1][1]:.1f},{calc_bounds[1][2]:.1f})")
+        print(f"   🔗 Grid overlaps model: {grid_overlaps_model}")
+        
+        if not grid_overlaps_model:
+            print("⚠️ WARNING: Calculation grid does not overlap with building model!")
+            
+        logging.info(f"   🏢 Model center: ({model_center[0]:.1f},{model_center[1]:.1f},{model_center[2]:.1f})")
+        logging.info(f"   📏 Distance to model center: {distance_to_center:.1f}m")
+        logging.info(f"   🎯 Source in bounds: {in_bounds}")
         logging.info(f"   🗂️ Calc grid bounds: min=({calc_bounds[0][0]:.1f},{calc_bounds[0][1]:.1f},{calc_bounds[0][2]:.1f}) max=({calc_bounds[1][0]:.1f},{calc_bounds[1][1]:.1f},{calc_bounds[1][2]:.1f})")
         logging.info(f"   🔗 Grid overlaps model: {grid_overlaps_model}")
         
