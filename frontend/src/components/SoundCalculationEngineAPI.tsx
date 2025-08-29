@@ -66,12 +66,6 @@ export class SoundCalculationEngineAPI {
   ): Promise<CalculationResult> {
     console.log(`API音響計算開始: 音源位置 ${soundSource.position.x}, ${soundSource.position.y}, ${soundSource.position.z}`);
     console.log(`計算範囲: 半径${this.calculationRadius}m, グリッドサイズ: ${this.gridSize}m`);
-    
-    // 建物モデルの状態を事前チェック
-    const modelInfo = await this.getModelInfo();
-    if (!modelInfo || !modelInfo.loaded) {
-      console.warn('⚠️ 建物モデルが読み込まれていないため、遮蔽効果なしで計算します');
-    }
 
     try {
       // APIリクエストデータを準備
@@ -97,29 +91,11 @@ export class SoundCalculationEngineAPI {
         body: JSON.stringify(requestData)
       });
 
-      // 進捗監視を開始
       const progressInterval = setInterval(async () => {
         try {
           const progressResponse = await fetch(`${this.apiBaseUrl}/calculation_progress`);
           if (progressResponse.ok) {
             const progress = await progressResponse.json();
-            console.clear();
-            console.log('🎵 音響計算の進捗状況');
-            console.log('━'.repeat(50));
-            console.log(`📊 進捗: ${progress.completed} / ${progress.total} 点完了`);
-            console.log(`📈 完了率: ${progress.percentage.toFixed(1)}%`);
-            console.log(`⏱️ 経過時間: ${Math.floor(progress.elapsed_time || 0)}秒`);
-            if (progress.estimated_remaining_time) {
-              console.log(`⏳ 推定残り時間: ${Math.floor(progress.estimated_remaining_time)}秒`);
-            }
-            console.log(`🔄 ステータス: ${progress.status}`);
-            
-            // プログレスバーの表示
-            const barLength = 30;
-            const filledLength = Math.floor((progress.percentage / 100) * barLength);
-            const bar = '█'.repeat(filledLength) + '░'.repeat(barLength - filledLength);
-            console.log(`📊 [${bar}] ${progress.percentage.toFixed(1)}%`);
-            console.log('━'.repeat(50));
 
             if (progress.status === 'completed') {
               clearInterval(progressInterval);
@@ -134,16 +110,11 @@ export class SoundCalculationEngineAPI {
       clearInterval(progressInterval);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API Error Details:', errorText);
-        throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.clear();
-      console.log('✅ API計算完了!');
-      console.log(`📊 処理済みポイント: ${data.points_processed}個`);
-      console.log('━'.repeat(50));
+      console.log('✅ API計算完了!', `処理済みポイント: ${data.points_processed}個`);
 
       // API結果をフロントエンド形式に変換（グリッドサイズ情報も含む）
       return this.convertApiResultToCalculationResult(data.results, data.grid_size || this.gridSize);
@@ -260,17 +231,8 @@ export class SoundCalculationEngineAPI {
       const response = await fetch(`${this.apiBaseUrl}/model_info`);
       if (response.ok) {
         const info = await response.json();
-        console.log('📋 モデル情報:', info);
-        
-        if (!info.loaded) {
-          console.error('❌ 建物モデルが読み込まれていません！音の遮蔽効果が正しく計算されません。');
-        } else {
-          console.log('✅ 建物モデル正常読み込み済み');
-        }
-        
+        console.log('モデル情報:', info);
         return info;
-      } else {
-        console.error('モデル情報取得エラー:', response.status, response.statusText);
       }
     } catch (error) {
       console.warn('モデル情報の取得に失敗:', error);
