@@ -23,6 +23,7 @@ origins = [
     "http://localhost",
     "http://localhost:3000",
     "https://liveechomap.onrender.com"
+    "https://liveechomap.onrender.com/" 
 ]
 
 # CORS設定
