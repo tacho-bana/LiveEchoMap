@@ -38,6 +38,8 @@ export const PlateauModel: React.FC<PlateauModelProps> = ({
         if (child.material instanceof THREE.MeshStandardMaterial) {
           child.material.metalness = 0.1;
           child.material.roughness = 0.9;
+          // Make buildings darker - set to a dark gray color
+          child.material.color = new THREE.Color(0x666666);
         }
         
         // Collect meshes for sound calculation
