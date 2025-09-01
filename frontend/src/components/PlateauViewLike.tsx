@@ -71,6 +71,8 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
   const [show3DHeatmap, setShow3DHeatmap] = useState(false);
   const [buildingMeshes, setBuildingMeshes] = useState<THREE.Mesh[]>([]);
   const [currentCamera, setCurrentCamera] = useState<THREE.Camera | null>(null);
+  const [windDirection, setWindDirection] = useState(0); // 風向き（度）
+  const [windSpeed, setWindSpeed] = useState(0); // 風速（m/s）
   
   const calculationEngine = useRef(new SoundCalculationEngineAPI(20, 300)); // グリッドサイズ20m、計算範囲300m
   
@@ -137,7 +139,9 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
       const primarySource = soundSources[0];
       const result = await calculationEngine.current.calculateSoundPropagation(
         primarySource,
-        buildingMeshes
+        buildingMeshes,
+        windDirection,
+        windSpeed
       );
 
       setCalculationResult(result);
@@ -212,6 +216,10 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
         soundSources={soundSources}
         onSoundSourceRemove={handleSoundSourceRemove}
         onDirectPlace={handleDirectPlace}
+        windDirection={windDirection}
+        windSpeed={windSpeed}
+        onWindDirectionChange={setWindDirection}
+        onWindSpeedChange={setWindSpeed}
       />
 
       {/* Loading Overlay */}

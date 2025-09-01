@@ -14,6 +14,10 @@ interface SoundControlPanelProps {
   onSoundSourceRemove: (id: string) => void;
   onDirectPlace?: () => void; // 直接配置用の関数
   calculationProgress?: { processed: number; total: number; percentage: number };
+  windDirection: number;
+  windSpeed: number;
+  onWindDirectionChange: (direction: number) => void;
+  onWindSpeedChange: (speed: number) => void;
 }
 
 /**
@@ -30,7 +34,11 @@ export const SoundControlPanel: React.FC<SoundControlPanelProps> = ({
   soundSources,
   onSoundSourceRemove,
   onDirectPlace,
-  calculationProgress
+  calculationProgress,
+  windDirection,
+  windSpeed,
+  onWindDirectionChange,
+  onWindSpeedChange
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -105,6 +113,55 @@ export const SoundControlPanel: React.FC<SoundControlPanelProps> = ({
             <div className="flex justify-between text-xs text-gray-500">
               <span>30dB (静か)</span>
               <span>100dB (非常に大きい)</span>
+            </div>
+          </div>
+
+          {/* 風の設定 */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-gray-700">風の設定</h4>
+            
+            {/* 風向き */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                風向き: {windDirection}° ({getWindDirectionText(windDirection)})
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="359"
+                step="1"
+                value={windDirection}
+                onChange={(e) => onWindDirectionChange(Number(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>0° (北)</span>
+                <span>90° (東)</span>
+                <span>180° (南)</span>
+                <span>270° (西)</span>
+              </div>
+            </div>
+
+            {/* 風速 */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                風速: {windSpeed.toFixed(1)} m/s ({getWindSpeedText(windSpeed)})
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="20"
+                step="0.5"
+                value={windSpeed}
+                onChange={(e) => onWindSpeedChange(Number(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>0 m/s (無風)</span>
+                <span>5 m/s (やや強)</span>
+                <span>10 m/s (強風)</span>
+                <span>20 m/s (非常に強い)</span>
+              </div>
             </div>
           </div>
 
@@ -190,3 +247,29 @@ export const SoundControlPanel: React.FC<SoundControlPanelProps> = ({
     </div>
   );
 };
+
+// 風向きをテキストで表示するヘルパー関数
+function getWindDirectionText(direction: number): string {
+  if (direction >= 337.5 || direction < 22.5) return '北';
+  if (direction >= 22.5 && direction < 67.5) return '北東';
+  if (direction >= 67.5 && direction < 112.5) return '東';
+  if (direction >= 112.5 && direction < 157.5) return '南東';
+  if (direction >= 157.5 && direction < 202.5) return '南';
+  if (direction >= 202.5 && direction < 247.5) return '南西';
+  if (direction >= 247.5 && direction < 292.5) return '西';
+  if (direction >= 292.5 && direction < 337.5) return '北西';
+  return '北';
+}
+
+// 風速をテキストで表示するヘルパー関数
+function getWindSpeedText(speed: number): string {
+  if (speed < 0.5) return '無風';
+  if (speed < 2) return '軽風';
+  if (speed < 4) return 'そよ風';
+  if (speed < 6) return '軟風';
+  if (speed < 8) return '和風';
+  if (speed < 10) return 'やや強風';
+  if (speed < 14) return '強風';
+  if (speed < 17) return '疾強風';
+  return '大強風';
+}

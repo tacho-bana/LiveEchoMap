@@ -68,6 +68,8 @@ class SoundRequest(BaseModel):
     initial_db: float        # 初期音量（dB）
     grid_size: int = 40      # グリッドサイズ（m）
     calc_range: int = 2000   # 計算範囲（m）
+    wind_direction: float = 0  # 風向き（度、0-359、北が0度）
+    wind_speed: float = 0      # 風速（m/s）
 
 class SoundResult(BaseModel):
     x: float
@@ -283,14 +285,18 @@ async def calculate_sound(request: SoundRequest):
     initial_db = request.initial_db
     grid_size = request.grid_size
     calc_range = request.calc_range
+    wind_direction = request.wind_direction
+    wind_speed = request.wind_speed
     
     # 座標系と計算範囲の詳細ログ
     print(f"🎵 Sound calculation started:")
     print(f"   🎯 Source position: ({source_pos[0]:.1f},{source_pos[1]:.1f},{source_pos[2]:.1f})")
     print(f"   🔊 Initial dB: {initial_db}, Grid: {grid_size}m, Range: {calc_range}m")
+    print(f"   🌬️ Wind: {wind_direction:.0f}° at {wind_speed:.1f}m/s")
     logging.info(f"🎵 Sound calculation started:")
     logging.info(f"   🎯 Source position: ({source_pos[0]:.1f},{source_pos[1]:.1f},{source_pos[2]:.1f})")
     logging.info(f"   🔊 Initial dB: {initial_db}, Grid: {grid_size}m, Range: {calc_range}m")
+    logging.info(f"   🌬️ Wind: {wind_direction:.0f}° at {wind_speed:.1f}m/s")
     
     # 建物との位置関係チェック
     if building_mesh_fallback is not None:
@@ -366,7 +372,9 @@ async def calculate_sound(request: SoundRequest):
                 source_pos.tolist(), 
                 initial_db, 
                 building_mesh_fallback.vertices.tolist() if building_mesh_fallback is not None else [],
-                building_mesh_fallback.faces.tolist() if building_mesh_fallback is not None else []
+                building_mesh_fallback.faces.tolist() if building_mesh_fallback is not None else [],
+                wind_direction,
+                wind_speed
             ): chunk for chunk in chunks
         }
         
@@ -395,8 +403,8 @@ async def calculate_sound(request: SoundRequest):
         "points_processed": len(results)
     }
 
-def process_chunk(points, source_pos, initial_db, mesh_vertices, mesh_faces):
-    """チャンクの計算処理（プロセス間で実行）"""
+def process_chunk(points, source_pos, initial_db, mesh_vertices, mesh_faces, wind_direction, wind_speed):
+    """チャンクの計算処理（風の影響を含む）"""
     # メッシュを再構築（建物モデルがある場合のみ）
     mesh = None
     if mesh_vertices and mesh_faces:
@@ -412,11 +420,11 @@ def process_chunk(points, source_pos, initial_db, mesh_vertices, mesh_faces):
         
         # 建物モデルの有無で計算方法を分岐
         if mesh is not None:
-            # 建物遮蔽ありの計算
-            final_db = calculate_fast_sound_attenuation(source_pos, target_pos, initial_db, mesh)
+            # 建物遮蔽ありの計算（風の影響を含む）
+            final_db = calculate_fast_sound_attenuation_with_wind(source_pos, target_pos, initial_db, mesh, wind_direction, wind_speed)
         else:
-            # 建物遮蔽なしの計算（距離減衰のみ）
-            final_db = calculate_distance_only_attenuation(source_pos, target_pos, initial_db)
+            # 建物遮蔽なしの計算（距離減衰のみ、風の影響を含む）
+            final_db = calculate_distance_only_attenuation_with_wind(source_pos, target_pos, initial_db, wind_direction, wind_speed)
         
         results.append({
             "x": x,
@@ -427,6 +435,60 @@ def process_chunk(points, source_pos, initial_db, mesh_vertices, mesh_faces):
         })
     
     return results
+
+def calculate_wind_effect(source_pos, target_pos, wind_direction, wind_speed):
+    """風の影響による音の減衰・増幅を計算"""
+    if wind_speed < 0.1:  # 風速が非常に弱い場合は無視
+        return 0
+    
+    # 音の進行方向ベクトル
+    sound_vector = target_pos - source_pos
+    sound_distance = np.linalg.norm(sound_vector)
+    
+    if sound_distance < 1:
+        return 0
+    
+    sound_direction_norm = sound_vector / sound_distance
+    
+    # 風向きを度からラジアンに変換（北が0度、東が90度）
+    wind_rad = np.radians(wind_direction)
+    # 風のベクトル（風の吹く方向）
+    wind_vector = np.array([np.sin(wind_rad), 0, np.cos(wind_rad)])  # Y軸は上下、風は水平
+    
+    # 音の進行方向と風向きの内積（風下ほど正の値）
+    wind_alignment = np.dot(sound_direction_norm[[0, 2]], wind_vector[[0, 2]])  # XZ平面のみで計算
+    
+    # 風の効果による減衰・増幅
+    # 風下（wind_alignment > 0）: 音が地面に曲がり、減衰が少なくなる（負の値で増幅）
+    # 風上（wind_alignment < 0）: 音が地面から離れ、減衰が多くなる（正の値で減衰）
+    
+    # 風速と距離に比例した効果（最大±10dB程度）
+    max_effect = min(wind_speed * 2, 10)  # 風速1m/sで最大2dB、上限10dB
+    distance_factor = min(sound_distance / 1000, 1)  # 1km以上で最大効果
+    
+    wind_effect = -wind_alignment * max_effect * distance_factor
+    
+    return wind_effect
+
+def calculate_distance_only_attenuation_with_wind(source_pos, target_pos, initial_db, wind_direction, wind_speed):
+    """建物モデルなしの場合の距離減衰計算（風の影響を含む）"""
+    # 基本の距離減衰
+    base_attenuation = calculate_distance_only_attenuation(source_pos, target_pos, initial_db)
+    
+    # 風の効果
+    wind_effect = calculate_wind_effect(source_pos, target_pos, wind_direction, wind_speed)
+    
+    return max(base_attenuation + wind_effect, 0)
+
+def calculate_fast_sound_attenuation_with_wind(source_pos, target_pos, initial_db, mesh, wind_direction, wind_speed):
+    """建物遮蔽ありの音響計算（風の影響を含む）"""
+    # 基本の音響計算
+    base_attenuation = calculate_fast_sound_attenuation(source_pos, target_pos, initial_db, mesh)
+    
+    # 風の効果
+    wind_effect = calculate_wind_effect(source_pos, target_pos, wind_direction, wind_speed)
+    
+    return max(base_attenuation + wind_effect, 0)
 
 def calculate_distance_only_attenuation(source_pos, target_pos, initial_db):
     """建物モデルなしの場合の距離減衰のみの計算（現実的なモデル）"""
