@@ -220,7 +220,7 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
       {/* 3D Canvas */}
       <Canvas
         camera={{ 
-          position: [0, 50, 0], 
+          position: [100, 80, 100], 
           fov: 45,
           near: 0.1,
           far: 10000
