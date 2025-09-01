@@ -62,7 +62,7 @@ export const CameraControlsInside: React.FC<CameraControlsInsideProps> = ({
           
           camera.position.set(
             center.x + distance * 0.7,
-            center.y + distance * 0.5,
+            center.y + distance * 0.8,
             center.z + distance * 0.7
           );
           
