@@ -47,9 +47,10 @@ export class SoundCalculationEngineAPI {
   constructor(gridSize: number = 20, calculationRadius: number = 300) {
     this.gridSize = gridSize;
     this.calculationRadius = calculationRadius;
-    
+
     // 環境変数で切り替え可能、デフォルトはローカル
-    this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://liveechomap.onrender.com';
+    // this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://liveechomap.onrender.com';
+    this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     
     console.log(`🔗 API Base URL: ${this.apiBaseUrl}`);
   }
@@ -98,7 +99,9 @@ export class SoundCalculationEngineAPI {
    */
   async calculateSoundPropagation(
     soundSource: SoundSource,
-    buildingMeshes?: THREE.Mesh[]
+    buildingMeshes?: THREE.Mesh[],
+    windDirection: number = 0,
+    windSpeed: number = 0
   ): Promise<CalculationResult> {
     console.log(`API音響計算開始: 音源位置 ${soundSource.position.x}, ${soundSource.position.y}, ${soundSource.position.z}`);
     
@@ -115,7 +118,9 @@ export class SoundCalculationEngineAPI {
         ],
         initial_db: soundSource.intensity,
         grid_size: gridSize,
-        calc_range: calcRange
+        calc_range: calcRange,
+        wind_direction: windDirection,
+        wind_speed: windSpeed
       };
 
       console.log('APIリクエスト:', requestData);
