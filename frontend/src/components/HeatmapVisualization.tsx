@@ -45,7 +45,7 @@ export const HeatmapVisualization: React.FC<HeatmapVisualizationProps> = ({
     if (gridPoints.length === 0) return [];
 
     return gridPoints
-      .filter(point => point.dB > 5) // 10dB以下は完全に非表示
+      .filter(point => point.dB > 10) // 10dB以下は完全に非表示
       .map((point, index) => {
         // グリッドサイズにぴったり合わせて重複を避ける
         const geometry = new THREE.PlaneGeometry(gridSize, gridSize);

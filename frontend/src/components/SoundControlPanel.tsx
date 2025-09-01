@@ -72,7 +72,7 @@ export const SoundControlPanel: React.FC<SoundControlPanelProps> = ({
                 {onDirectPlace && (
                   <button
                     onClick={onDirectPlace}
-                    className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                    className="px-3 py-1 bg-red-600 text-black text-xs rounded hover:bg-red-700 transition-colors"
                   >
                     🔴 音源配置
                   </button>
@@ -156,49 +156,34 @@ export const SoundControlPanel: React.FC<SoundControlPanelProps> = ({
                 onChange={(e) => onWindSpeedChange(Number(e.target.value))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               />
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>0 m/s (無風)</span>
-                <span>5 m/s (やや強)</span>
-                <span>10 m/s (強風)</span>
-                <span>20 m/s (非常に強い)</span>
-              </div>
             </div>
           </div>
 
-          {/* 音源リスト */}
+          {/* 音源情報 */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-gray-700">配置済み音源</h4>
-              <span className="text-xs text-gray-500">{soundSources.length}個</span>
-            </div>
+            <h4 className="text-sm font-medium text-gray-700">配置済み音源</h4>
             
             {soundSources.length === 0 ? (
               <p className="text-xs text-gray-400 italic">音源が配置されていません</p>
             ) : (
-              <div className="max-h-40 overflow-y-auto space-y-2">
-                {soundSources.map((source, index) => (
-                  <div
-                    key={source.id}
-                    className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs"
-                  >
-                    <div>
-                      <div className="font-medium">音源 {index + 1}</div>
-                      <div className="text-gray-500">
-                        {source.intensity}dB | 
-                        ({source.position.x.toFixed(1)}, {source.position.y.toFixed(1)}, {source.position.z.toFixed(1)})
-                      </div>
+              <div className="p-2 bg-gray-50 rounded text-xs">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-gray-500">
+                      {soundSources[0].intensity}dB | 
+                      ({soundSources[0].position.x.toFixed(1)}, {soundSources[0].position.y.toFixed(1)}, {soundSources[0].position.z.toFixed(1)})
                     </div>
-                    <button
-                      onClick={() => onSoundSourceRemove(source.id)}
-                      className="p-1 text-red-500 hover:bg-red-100 rounded"
-                      title="削除"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
                   </div>
-                ))}
+                  <button
+                    onClick={() => onSoundSourceRemove(soundSources[0].id)}
+                    className="p-1 text-red-500 hover:bg-red-100 rounded"
+                    title="削除"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -210,14 +195,14 @@ export const SoundControlPanel: React.FC<SoundControlPanelProps> = ({
               disabled={soundSources.length === 0 || isCalculating}
               className={`w-full py-3 px-4 rounded-lg font-medium text-sm transition-colors ${
                 soundSources.length === 0 || isCalculating
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                  : 'bg-blue-600 text-black hover:bg-blue-700'
               }`}
             >
               {isCalculating ? (
                 <div className="space-y-2">
                   <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <div className="text-black animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
                     計算中...
                   </div>
                   {calculationProgress && (
@@ -228,7 +213,7 @@ export const SoundControlPanel: React.FC<SoundControlPanelProps> = ({
                           style={{ width: `${calculationProgress.percentage}%` }}
                         ></div>
                       </div>
-                      <div className="text-xs text-center text-blue-100">
+                      <div className="text-xs text-center text-black">
                         {calculationProgress.processed} / {calculationProgress.total} 点完了 ({calculationProgress.percentage.toFixed(1)}%)
                       </div>
                     </div>
