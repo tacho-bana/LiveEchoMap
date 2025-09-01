@@ -55,6 +55,42 @@ export class SoundCalculationEngineAPI {
   }
 
   /**
+   * 音量に応じて計算パラメータを動的調整
+   * @param intensity 音量（dB）
+   * @returns 調整されたグリッドサイズと計算範囲
+   */
+  private getOptimalParameters(intensity: number): { gridSize: number, calcRange: number } {
+    // 音量に応じた計算範囲の決定
+    let calcRange: number;
+    let gridSize: number;
+    
+    if (intensity >= 100) {
+      // 非常に高い音量: 広範囲、粗いグリッド
+      calcRange = 2000;
+      gridSize = 50;
+    } else if (intensity >= 90) {
+      // 高い音量: 中広範囲、中粗いグリッド
+      calcRange = 1500;
+      gridSize = 40;
+    } else if (intensity >= 80) {
+      // 中高音量: 中範囲、標準グリッド
+      calcRange = 1000;
+      gridSize = 30;
+    } else if (intensity >= 70) {
+      // 中音量: 中範囲、細かいグリッド
+      calcRange = 800;
+      gridSize = 25;
+    } else {
+      // 低音量: 狭範囲、細かいグリッド
+      calcRange = 500;
+      gridSize = 20;
+    }
+    
+    console.log(`🎵 音量${intensity}dB -> 計算範囲: ${calcRange}m, グリッドサイズ: ${gridSize}m`);
+    return { gridSize, calcRange };
+  }
+
+  /**
    * APIを使用した音響伝播計算
    * @param soundSource 音源情報
    * @param buildingMeshes 使用しない（API側で処理）
@@ -65,7 +101,9 @@ export class SoundCalculationEngineAPI {
     buildingMeshes?: THREE.Mesh[]
   ): Promise<CalculationResult> {
     console.log(`API音響計算開始: 音源位置 ${soundSource.position.x}, ${soundSource.position.y}, ${soundSource.position.z}`);
-    console.log(`計算範囲: 半径${this.calculationRadius}m, グリッドサイズ: ${this.gridSize}m`);
+    
+    // 音量に応じて最適なパラメータを取得
+    const { gridSize, calcRange } = this.getOptimalParameters(soundSource.intensity);
 
     try {
       // APIリクエストデータを準備
@@ -76,8 +114,8 @@ export class SoundCalculationEngineAPI {
           soundSource.position.z
         ],
         initial_db: soundSource.intensity,
-        grid_size: this.gridSize,
-        calc_range: this.calculationRadius
+        grid_size: gridSize,
+        calc_range: calcRange
       };
 
       console.log('APIリクエスト:', requestData);
@@ -117,13 +155,13 @@ export class SoundCalculationEngineAPI {
       console.log('✅ API計算完了!', `処理済みポイント: ${data.points_processed}個`);
 
       // API結果をフロントエンド形式に変換（グリッドサイズ情報も含む）
-      return this.convertApiResultToCalculationResult(data.results, data.grid_size || this.gridSize);
+      return this.convertApiResultToCalculationResult(data.results, data.grid_size || gridSize);
 
     } catch (error) {
       console.error('API音響計算エラー:', error);
       
       // フォールバック: 簡易的な結果を返す
-      return this.generateFallbackResult(soundSource);
+      return this.generateFallbackResult(soundSource, gridSize);
     }
   }
 
@@ -165,7 +203,7 @@ export class SoundCalculationEngineAPI {
   /**
    * API接続失敗時のフォールバック結果生成
    */
-  private generateFallbackResult(soundSource: SoundSource): CalculationResult {
+  private generateFallbackResult(soundSource: SoundSource, gridSize: number): CalculationResult {
     console.warn('APIフォールバック: 簡易計算を使用');
     
     const gridPoints: Array<{
@@ -176,13 +214,16 @@ export class SoundCalculationEngineAPI {
 
     const heatmapData: HeatmapDataPoint[] = [];
 
+    // 音量に応じた計算範囲を使用
+    const { calcRange } = this.getOptimalParameters(soundSource.intensity);
+    
     // 簡易的な同心円計算
-    const steps = Math.floor(this.calculationRadius / this.gridSize);
+    const steps = Math.floor(calcRange / gridSize);
     
     for (let x = -steps; x <= steps; x++) {
       for (let z = -steps; z <= steps; z++) {
-        const gridX = soundSource.position.x + x * this.gridSize;
-        const gridZ = soundSource.position.z + z * this.gridSize;
+        const gridX = soundSource.position.x + x * gridSize;
+        const gridZ = soundSource.position.z + z * gridSize;
         const gridY = 0;
 
         const gridPosition = new THREE.Vector3(gridX, gridY, gridZ);
@@ -219,7 +260,7 @@ export class SoundCalculationEngineAPI {
     return {
       heatmapData,
       gridPoints,
-      gridSize: this.gridSize
+      gridSize: gridSize
     };
   }
 
