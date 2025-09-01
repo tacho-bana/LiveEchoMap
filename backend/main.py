@@ -429,26 +429,47 @@ def process_chunk(points, source_pos, initial_db, mesh_vertices, mesh_faces):
     return results
 
 def calculate_distance_only_attenuation(source_pos, target_pos, initial_db):
-    """建物モデルなしの場合の距離減衰のみの計算"""
+    """建物モデルなしの場合の距離減衰のみの計算（現実的なモデル）"""
     distance = np.linalg.norm(target_pos - source_pos)
-    if distance < 0.1:
+    if distance < 1.0:
         return initial_db
     
-    # 基本的な距離減衰のみ
-    distance_loss = 20 * np.log10(distance)
-    air_absorption = distance * 0.001
+    # より現実的な距離減衰モデル
+    # 100m: -20dB, 1km: -40dB, 5km: -60dBのカーブに調整
+    if distance <= 100:
+        # 1m-100m: 線形減衰で約20dB
+        distance_loss = 20 * (distance - 1) / 99
+    elif distance <= 1000:
+        # 100m-1km: 20dB追加で合計40dB
+        distance_loss = 20 + 20 * (distance - 100) / 900
+    elif distance <= 5000:
+        # 1km-5km: 20dB追加で合計60dB
+        distance_loss = 40 + 20 * (distance - 1000) / 4000
+    else:
+        # 5km以上: 最大60dB減衰 + 追加で緩やかに減衰
+        distance_loss = 60 + 10 * np.log10(distance / 5000)
+    
+    # 軽度の空気吸収（長距離のみ影響）
+    air_absorption = max(0, (distance - 100) * 0.0005)
     
     final_db = initial_db - distance_loss - air_absorption
     return max(final_db, 0)
 
 def calculate_fast_sound_attenuation(source_pos, target_pos, initial_db, mesh):
-    """高速な音の減衰計算（デバッグ強化版）"""
+    """高速な音の減衰計算（現実的なモデル）"""
     distance = np.linalg.norm(target_pos - source_pos)
-    if distance < 0.1:
+    if distance < 1.0:
         return initial_db
     
-    # 距離による減衰
-    distance_loss = 20 * np.log10(distance)
+    # 現実的な距離減衰（建物なしと同じ基本減衰）
+    if distance <= 100:
+        distance_loss = 20 * (distance - 1) / 99
+    elif distance <= 1000:
+        distance_loss = 20 + 20 * (distance - 100) / 900
+    elif distance <= 5000:
+        distance_loss = 40 + 20 * (distance - 1000) / 4000
+    else:
+        distance_loss = 60 + 10 * np.log10(distance / 5000)
     
     # 建物による遮蔽（高速版）
     obstruction_loss = calculate_fast_obstruction(source_pos, target_pos, mesh)
@@ -458,8 +479,8 @@ def calculate_fast_sound_attenuation(source_pos, target_pos, initial_db, mesh):
         logging.info(f"🔍 Sound calc: src=({source_pos[0]:.1f},{source_pos[1]:.1f},{source_pos[2]:.1f}) -> tgt=({target_pos[0]:.1f},{target_pos[1]:.1f},{target_pos[2]:.1f})")
         logging.info(f"🔍 distance={distance:.1f}m, distance_loss={distance_loss:.1f}dB, obstruction_loss={obstruction_loss:.1f}dB")
     
-    # 空気吸収（簡略版）
-    air_absorption = distance * 0.001
+    # 軽度の空気吸収（長距離のみ影響）
+    air_absorption = max(0, (distance - 100) * 0.0005)
     
     final_db = initial_db - distance_loss - obstruction_loss - air_absorption
     return max(final_db, 0)
@@ -503,15 +524,15 @@ def calculate_fast_obstruction(source_pos, target_pos, mesh):
             logging.info(f"🏢 Ray: src=({source_pos[0]:.1f},{source_pos[1]:.1f},{source_pos[2]:.1f}) dir=({ray_direction[0]:.2f},{ray_direction[1]:.2f},{ray_direction[2]:.2f})")
             logging.info(f"🏢 Intersections: {valid_intersections}, distances={intersection_distances[:3]}, total_hits={len(locations)}")
         
-        # 遮蔽による損失（簡略版）
+        # 遮蔽による損失（軽減版）
         if valid_intersections == 0:
             return 0
         elif valid_intersections <= 2:
-            return 15  # 軽度の遮蔽
+            return 10  # 軽度の遮蔽（15dB→10dB）
         elif valid_intersections <= 4:
-            return 25  # 中程度の遮蔽
+            return 18  # 中程度の遮蔽（25dB→18dB）
         else:
-            return 35  # 重度の遮蔽
+            return 25  # 重度の遮蔽（35dB→25dB）
             
     except Exception as e:
         # エラーログを出力
