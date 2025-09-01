@@ -2,7 +2,7 @@
 
 import { OrbitControls, Environment, Stats } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
-import { Suspense, useState, useCallback, useRef } from 'react';
+import { Suspense, useState, useCallback, useRef, useEffect } from 'react';
 import { PlateauModel } from './PlateauModel';
 import { CameraControlsInside } from './CameraControlsInside';
 import { SoundClickHandler } from './SoundClickHandler';
@@ -76,13 +76,12 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
   
   const calculationEngine = useRef(new SoundCalculationEngineAPI(20, 300)); // グリッドサイズ20m、計算範囲300m
   
-  // 地理座標の設定（山下ふ頭の座標）
   const referenceCoords = { longitude: 139.63, latitude: 35.45 };
 
-  // 音源配置ハンドラー
+  // 音源配置ハンドラー（1個のみ許可）
   const handleSoundSourcePlaced = useCallback((source: SoundSource) => {
-    setSoundSources(prev => [...prev, { ...source, intensity: currentIntensity }]);
-    console.log('音源が配置されました:', source);
+    setSoundSources([{ ...source, intensity: currentIntensity }]); // 配列を置き換え
+    console.log('音源が配置されました（既存の音源を置き換え）:', source);
   }, [currentIntensity]);
 
   // 直接音源配置ハンドラー（カメラのXZ位置、Y=0に配置）
@@ -107,8 +106,8 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
       intensity: currentIntensity
     };
 
-    setSoundSources(prev => [...prev, soundSource]);
-    console.log('音源配置（地面レベル）:', {
+    setSoundSources([soundSource]); // 配列を置き換え
+    console.log('音源配置（既存の音源を置き換え）:', {
       id: sourceId,
       position: `(${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)})`,
       intensity: currentIntensity
@@ -155,6 +154,19 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
     }
   }, [soundSources, buildingMeshes]);
 
+  // 風向きをテキストで表示するヘルパー関数
+  const getWindDirectionText = (direction: number): string => {
+    if (direction >= 337.5 || direction < 22.5) return '北';
+    if (direction >= 22.5 && direction < 67.5) return '北東';
+    if (direction >= 67.5 && direction < 112.5) return '東';
+    if (direction >= 112.5 && direction < 157.5) return '南東';
+    if (direction >= 157.5 && direction < 202.5) return '南';
+    if (direction >= 202.5 && direction < 247.5) return '南西';
+    if (direction >= 247.5 && direction < 292.5) return '西';
+    if (direction >= 292.5 && direction < 337.5) return '北西';
+    return '北';
+  };
+
   const toggleLayer = async (layerId: string) => {
     setLayers(prev => prev.map(layer => {
       if (layer.id === layerId) {
@@ -187,7 +199,6 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
       <div className="absolute top-0 left-0 right-0 z-20 bg-white shadow-sm border-b">
         <div className="flex items-center justify-between px-6 py-3">
           <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-bold text-gray-800">PLATEAU 3D都市モデル - 音響シミュレーション</h1>
           </div>
           <div className="flex items-center space-x-4">
             <button
@@ -204,6 +215,7 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
           </div>
         </div>
       </div>
+
 
       {/* Sound Control Panel */}
       <SoundControlPanel
@@ -271,6 +283,8 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
               intensity={source.intensity}
               id={source.id}
               onRemove={handleSoundSourceRemove}
+              windDirection={windDirection}
+              windSpeed={windSpeed}
             />
           ))}
           

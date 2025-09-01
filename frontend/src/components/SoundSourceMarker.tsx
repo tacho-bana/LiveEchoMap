@@ -9,6 +9,8 @@ interface SoundSourceMarkerProps {
   intensity: number;
   id: string;
   onRemove: (id: string) => void;
+  windDirection?: number;
+  windSpeed?: number;
 }
 
 /**
@@ -19,11 +21,14 @@ export const SoundSourceMarker: React.FC<SoundSourceMarkerProps> = ({
   position,
   intensity,
   id,
-  onRemove
+  onRemove,
+  windDirection = 0,
+  windSpeed = 0
 }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
   const ringRef = useRef<THREE.Mesh>(null);
+  const windArrowRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
 
   // アニメーション用の時間管理
@@ -41,6 +46,12 @@ export const SoundSourceMarker: React.FC<SoundSourceMarkerProps> = ({
       materialRef.current.color.copy(intensityColor);
       materialRef.current.emissive.copy(intensityColor);
       materialRef.current.needsUpdate = true;
+    }
+
+    // 風向き矢印の更新（180度反転）
+    if (windArrowRef.current) {
+      const targetRotationY = THREE.MathUtils.degToRad(windDirection + 180);
+      windArrowRef.current.rotation.y = targetRotationY;
     }
   });
 
@@ -92,6 +103,31 @@ export const SoundSourceMarker: React.FC<SoundSourceMarkerProps> = ({
           emissiveIntensity={0.3}
         />
       </mesh>
+
+      {/* 風向き矢印（風速が0より大きい時のみ） */}
+      {windSpeed > 0 && (
+        <group 
+          ref={windArrowRef}
+          position={[0, intensity >= 80 ? 8 : 6, 0]}
+        >
+          {/* 矢印の軸（水平に回転） */}
+          <mesh 
+            position={[0, 0, 3]}
+            rotation={[Math.PI / 2, 0, 0]}
+          >
+            <cylinderGeometry args={[0.3, 0.3, 6, 8]} />
+            <meshBasicMaterial color="#00aa00" />
+          </mesh>
+          {/* 矢印の先端（水平に回転） */}
+          <mesh 
+            position={[0, 0, 6]}
+            rotation={[Math.PI / 2, 0, 0]}
+          >
+            <coneGeometry args={[1.5, 4, 8]} />
+            <meshBasicMaterial color="#00ff00" />
+          </mesh>
+        </group>
+      )}
 
       {/* 音源情報表示（ホバー時） */}
       {hovered && (
