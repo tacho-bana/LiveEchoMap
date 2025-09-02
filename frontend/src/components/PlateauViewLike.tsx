@@ -9,6 +9,8 @@ import { SoundClickHandler } from './SoundClickHandler';
 import { SoundSourceMarker } from './SoundSourceMarker';
 import { SoundControlPanel } from './SoundControlPanel';
 import { HeatmapVisualization, HeatmapLegend } from './HeatmapVisualization';
+import { AudioSimulation } from './AudioSimulation';
+import { AudioProcessor } from './AudioProcessor';
 import { SoundCalculationEngineAPI, SoundSource, CalculationResult, HeatmapDataPoint } from './SoundCalculationEngineAPI';
 import { CameraRef } from './CameraRef';
 import * as THREE from 'three';
@@ -69,10 +71,20 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
   const [heatmapData, setHeatmapData] = useState<HeatmapDataPoint[]>([]);
   const [calculationResult, setCalculationResult] = useState<CalculationResult | null>(null);
   const [show3DHeatmap, setShow3DHeatmap] = useState(false);
+  const [showAudioSimulation, setShowAudioSimulation] = useState(false);
   const [buildingMeshes, setBuildingMeshes] = useState<THREE.Mesh[]>([]);
   const [currentCamera, setCurrentCamera] = useState<THREE.Camera | null>(null);
   const [windDirection, setWindDirection] = useState(0); // 風向き（度）
   const [windSpeed, setWindSpeed] = useState(0); // 風速（m/s）
+  
+  // 音響再生関連の状態
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [selectedAudioPoint, setSelectedAudioPoint] = useState<{
+    position: THREE.Vector3;
+    dB: number;
+    bassDb?: number;
+    distance: number;
+  } | null>(null);
   
   const calculationEngine = useRef(new SoundCalculationEngineAPI(20, 300)); // グリッドサイズ20m、計算範囲300m
   
@@ -123,6 +135,54 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
   const handleModelLoad = useCallback((meshes: THREE.Mesh[]) => {
     setBuildingMeshes(meshes);
     console.log(`建物メッシュが読み込まれました: ${meshes.length}個`);
+  }, []);
+
+  // 音響ポイントクリック時のハンドラー
+  const handleAudioPointClick = useCallback((point: { position: THREE.Vector3; dB: number; bassDb?: number }) => {
+    if (soundSources.length === 0) {
+      console.warn('音源が配置されていません');
+      return;
+    }
+
+    const soundSource = soundSources[0];
+    const distance = soundSource.position.distanceTo(point.position);
+    
+    // 既に再生中の場合は一度停止してから新しい音を再生
+    if (isAudioPlaying && selectedAudioPoint) {
+      console.log('🔄 再生中の音響を停止して新しい地点の音響を再生');
+      setIsAudioPlaying(false);
+      
+      // 少し待ってから新しい音を開始（音声の重複を避ける）
+      setTimeout(() => {
+        setSelectedAudioPoint({
+          position: point.position,
+          dB: point.dB,
+          bassDb: point.bassDb,
+          distance: distance
+        });
+        
+        setIsAudioPlaying(true);
+        console.log(`🎵 音響再生切り替え: 位置=(${point.position.x.toFixed(1)}, ${point.position.z.toFixed(1)}), 音量=${point.dB.toFixed(1)}dB, 距離=${distance.toFixed(1)}m`);
+      }, 200); // 200ms待機
+    } else {
+      // 新規再生
+      setSelectedAudioPoint({
+        position: point.position,
+        dB: point.dB,
+        bassDb: point.bassDb,
+        distance: distance
+      });
+      
+      setIsAudioPlaying(true);
+      console.log(`🎵 音響再生開始: 位置=(${point.position.x.toFixed(1)}, ${point.position.z.toFixed(1)}), 音量=${point.dB.toFixed(1)}dB, 距離=${distance.toFixed(1)}m`);
+    }
+  }, [soundSources, isAudioPlaying, selectedAudioPoint]);
+
+  // 音響再生停止ハンドラー
+  const handleAudioStop = useCallback(() => {
+    setIsAudioPlaying(false);
+    setSelectedAudioPoint(null);
+    console.log('🛑 音響再生停止');
   }, []);
 
   // ヒートマップ計算の実行
@@ -212,6 +272,18 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
               3Dヒートマップ {show3DHeatmap ? 'ON' : 'OFF'}
             </button>
             
+            <button
+              onClick={() => setShowAudioSimulation(!showAudioSimulation)}
+              className={`px-3 py-1 text-xs rounded font-medium transition-colors ${
+                showAudioSimulation
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+              title="色パネルを長押し（0.5秒）で音響体験"
+            >
+              音響体験 {showAudioSimulation ? 'ON' : 'OFF'}
+            </button>
+            
           </div>
         </div>
       </div>
@@ -297,6 +369,16 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
             />
           )}
           
+          {/* Audio Simulation Points */}
+          {calculationResult && showAudioSimulation && soundSources.length > 0 && (
+            <AudioSimulation
+              gridPoints={calculationResult.gridPoints}
+              soundSourcePosition={soundSources[0].position}
+              gridSize={calculationResult.gridSize}
+              onPointClick={handleAudioPointClick}
+            />
+          )}
+          
           {/* Render enabled layers */}
           <Suspense fallback={null}>
             {layers.filter(layer => layer.enabled).map(layer => {
@@ -334,6 +416,30 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
 
       {/* 3D Heatmap Legend */}
       <HeatmapLegend visible={show3DHeatmap} />
+
+      {/* Audio Simulation Instructions */}
+      {showAudioSimulation && calculationResult && soundSources.length > 0 && (
+        <div className="fixed top-20 left-4 bg-green-50 border border-green-200 rounded-lg p-3 z-40 max-w-xs">
+          <div className="text-sm text-green-800">
+            <div className="font-medium mb-1">🎵 音響体験モード</div>
+            <div className="text-xs">
+              色付きパネルを<strong>0.5秒長押し</strong>で、その地点での音の聞こえ方を体験できます
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Audio Processor */}
+      {isAudioPlaying && selectedAudioPoint && (
+        <AudioProcessor
+          soundFile="/sound/Ambulance-Siren03/Ambulance-Siren03-1(Close).mp3"
+          targetDb={selectedAudioPoint.dB}
+          bassDb={selectedAudioPoint.bassDb}
+          distance={selectedAudioPoint.distance}
+          isPlaying={isAudioPlaying}
+          onStop={handleAudioStop}
+        />
+      )}
     </div>
   );
 }
