@@ -410,6 +410,14 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
             maxDistance={1000}
             minDistance={20}
             target={[0, 0, 0]}
+            enablePan={true}
+            panSpeed={1.0}
+            rotateSpeed={0.5}
+            zoomSpeed={1.0}
+            touches={{
+              ONE: THREE.TOUCH.ROTATE,
+              TWO: THREE.TOUCH.DOLLY_PAN
+            }}
           />
         </Canvas>
 

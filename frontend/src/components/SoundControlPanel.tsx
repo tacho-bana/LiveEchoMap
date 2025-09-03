@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SoundSource } from './SoundCalculationEngineAPI';
 
 interface SoundControlPanelProps {
@@ -41,12 +41,24 @@ export const SoundControlPanel: React.FC<SoundControlPanelProps> = ({
   onWindSpeedChange
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // モバイル判定
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(mobile);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   return (
-    <div className="absolute top-20 left-4 bg-white rounded-lg shadow-lg z-50 min-w-80 max-w-sm">
+    <div className={`absolute ${isMobile ? 'top-4 left-2 right-2 mobile-panel' : 'top-20 left-4'} bg-white rounded-lg shadow-lg z-50 ${isMobile ? 'w-auto' : 'min-w-80 max-w-sm'}`}>
       {/* ヘッダー */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <h3 className="text-lg font-semibold text-gray-800">音響シミュレーション</h3>
+      <div className={`flex items-center justify-between ${isMobile ? 'p-3' : 'p-4'} border-b`}>
+        <h3 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-gray-800`}>音響シミュレーション</h3>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="p-1 hover:bg-gray-100 rounded"
@@ -63,16 +75,16 @@ export const SoundControlPanel: React.FC<SoundControlPanelProps> = ({
       </div>
 
       {isExpanded && (
-        <div className="p-4 space-y-6">
+        <div className={`${isMobile ? 'p-3 space-y-4' : 'p-4 space-y-6'}`}>
           {/* 音源配置セクション */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">音源配置</label>
+              <label className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium text-gray-700`}>音源配置</label>
               <div className="flex space-x-2">
                 {onDirectPlace && (
                   <button
                     onClick={onDirectPlace}
-                    className="px-3 py-1 bg-red-600 text-black text-xs rounded hover:bg-red-700 transition-colors"
+                    className={`${isMobile ? 'px-2 py-1 text-xs' : 'px-3 py-1 text-xs'} bg-red-600 text-black rounded hover:bg-red-700 transition-colors`}
                   >
                     🔴 音源配置
                   </button>

@@ -336,6 +336,13 @@ button:hover {
   overflow: hidden;
 }
 
+/* モバイル対応 */
+@media (max-width: 768px) {
+  .canvas-container {
+    touch-action: none; /* スマホでのスクロール防止 */
+  }
+}
+
 /* ローディング表示用のスタイリング */
 .loading-overlay {
   position: absolute;
@@ -366,4 +373,17 @@ button:hover {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* モバイル向けボタンサイズ調整 */
+@media (max-width: 768px) {
+  .mobile-button {
+    min-height: 44px; /* iOS推奨タップ領域 */
+    min-width: 44px;
+  }
+  
+  .mobile-panel {
+    max-height: 80vh; /* パネルが画面を占有しすぎないように */
+    overflow-y: auto;
+  }
 }
