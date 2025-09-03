@@ -1,4 +1,5 @@
 import dynamic from 'next/dynamic';
+import { OrientationWarning } from '../components/OrientationWarning';
 
 // PlateauViewLikeコンポーネントを動的にインポート
 // SSR（Server-Side Rendering）を無効にしてクライアントサイドでのみ実行
@@ -21,6 +22,9 @@ const PlateauViewLike = dynamic(
 
 export default function Home() {
   return (
-    <PlateauViewLike modelUrl="/models/sinjuku" />
+    <>
+      <OrientationWarning />
+      <PlateauViewLike modelUrl="/models/sinjuku" />
+    </>
   );
 }
