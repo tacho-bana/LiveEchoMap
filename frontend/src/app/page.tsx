@@ -11,8 +11,8 @@ const PlateauViewLike = dynamic(
       <div className="flex items-center justify-center h-screen bg-gray-100">
         <div className="bg-white rounded-lg p-8 shadow-lg text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <div className="text-xl font-semibold text-gray-800 mb-2">PLATEAU 3Dビューア</div>
-          <div className="text-sm text-gray-600">初期化中...</div>
+          <div className="text-xl font-semibold text-gray-800 mb-2">3D音響シミュレーション</div>
+          <div className="text-sm text-gray-600">読み込み中</div>
         </div>
       </div>
     )

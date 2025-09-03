@@ -265,7 +265,7 @@ export default function PlateauViewLike({ modelUrl }: PlateauViewLikeProps) {
               onClick={() => setShow3DHeatmap(!show3DHeatmap)}
               className={`px-3 py-1 text-xs rounded font-medium transition-colors ${
                 show3DHeatmap
-                  ? 'bg-purple-600 text-white'
+                  ? 'bg-green-600 text-white'
                   : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
               }`}
             >
