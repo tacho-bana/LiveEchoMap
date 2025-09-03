@@ -71,6 +71,10 @@ body {
   background-color: black;
 }
 
+.bg-green-600{
+  background-color: green;
+}
+
 .bg-opacity-50 {
   background-color: rgba(0, 0, 0, 0.5);
 }

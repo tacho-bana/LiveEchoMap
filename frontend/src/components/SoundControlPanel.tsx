@@ -145,7 +145,7 @@ export const SoundControlPanel: React.FC<SoundControlPanelProps> = ({
             {/* 風速 */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">
-                風速: {windSpeed.toFixed(1)} m/s ({getWindSpeedText(windSpeed)})
+                風速: {windSpeed.toFixed(1)} m/s
               </label>
               <input
                 type="range"
@@ -247,14 +247,14 @@ function getWindDirectionText(direction: number): string {
 }
 
 // 風速をテキストで表示するヘルパー関数
-function getWindSpeedText(speed: number): string {
-  if (speed < 0.5) return '無風';
-  if (speed < 2) return '軽風';
-  if (speed < 4) return 'そよ風';
-  if (speed < 6) return '軟風';
-  if (speed < 8) return '和風';
-  if (speed < 10) return 'やや強風';
-  if (speed < 14) return '強風';
-  if (speed < 17) return '疾強風';
-  return '大強風';
-}
+// function getWindSpeedText(speed: number): string {
+//   if (speed < 0.5) return '無風';
+//   if (speed < 2) return '軽風';
+//   if (speed < 4) return 'そよ風';
+//   if (speed < 6) return '軟風';
+//   if (speed < 8) return '和風';
+//   if (speed < 10) return 'やや強風';
+//   if (speed < 14) return '強風';
+//   if (speed < 17) return '疾強風';
+//   return '大強風';
+// }
