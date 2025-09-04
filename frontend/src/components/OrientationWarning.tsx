@@ -41,47 +41,103 @@ export const OrientationWarning: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 z-[9999] flex items-center justify-center">
-      <div className="bg-white rounded-lg p-8 m-4 text-center max-w-sm">
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.9)',
+      zIndex: 10000,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        padding: '32px',
+        margin: '16px',
+        textAlign: 'center',
+        maxWidth: '384px'
+      }}>
         {/* 回転アイコン */}
-        <div className="mb-6">
-          <div className="mx-auto w-16 h-16 border-4 border-blue-600 rounded-lg flex items-center justify-center relative">
-            <div className="w-8 h-5 bg-blue-600 rounded-sm"></div>
-            <div className="absolute -top-2 -right-2 text-2xl animate-bounce">
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{
+            margin: '0 auto',
+            width: '64px',
+            height: '64px',
+            border: '4px solid #2563eb',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative'
+          }}>
+            <div style={{
+              width: '32px',
+              height: '20px',
+              backgroundColor: '#2563eb',
+              borderRadius: '4px'
+            }}></div>
+            <div style={{
+              position: 'absolute',
+              top: '-8px',
+              right: '-8px',
+              fontSize: '24px'
+            }}>
               🔄
             </div>
           </div>
         </div>
 
         {/* メッセージ */}
-        <h2 className="text-xl font-bold text-gray-800 mb-4">
+        <h2 style={{
+          fontSize: '20px',
+          fontWeight: 'bold',
+          color: '#1f2937',
+          marginBottom: '16px'
+        }}>
           横画面でご利用ください
         </h2>
         
-        <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-          LiveEchoMapは横画面での利用を推奨しています。
+        <p style={{
+          color: '#6b7280',
+          marginBottom: '24px',
+          fontSize: '14px',
+          lineHeight: '1.6'
+        }}>
+          本アプリケーションは横画面での利用を推奨しています。
           <br />
           デバイスを回転させて横画面モードに切り替えてください。
         </p>
 
         {/* 操作説明 */}
-        <div className="bg-gray-50 rounded-lg p-4 text-left">
-          <h3 className="font-semibold text-gray-800 mb-2 text-sm">横画面での操作方法:</h3>
-          <ul className="text-xs text-gray-600 space-y-1">
-            <li>• ピンチ: ズームイン/アウト</li>
-            <li>• ドラッグ: カメラ回転</li>
-            <li>• タップ: 音源配置</li>
+        <div style={{
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          padding: '16px',
+          textAlign: 'left'
+        }}>
+          <h3 style={{
+            fontWeight: '600',
+            color: '#1f2937',
+            marginBottom: '8px',
+            fontSize: '14px'
+          }}>横画面での操作方法:</h3>
+          <ul style={{
+            fontSize: '12px',
+            color: '#6b7280',
+            listStyle: 'none',
+            padding: 0,
+            margin: 0
+          }}>
+            <li style={{ marginBottom: '4px' }}>• ピンチ: ズームイン/アウト</li>
+            <li style={{ marginBottom: '4px' }}>• ドラッグ: カメラ回転</li>
+            <li style={{ marginBottom: '4px' }}>• タップ: 音源配置</li>
             <li>• 2本指ドラッグ: カメラ移動</li>
           </ul>
         </div>
-
-        {/* 強制続行ボタン（小さく） */}
-        <button
-          onClick={() => setIsPortrait(false)}
-          className="mt-4 text-xs text-gray-400 underline hover:text-gray-600"
-        >
-          このまま続行する
-        </button>
       </div>
     </div>
   );
